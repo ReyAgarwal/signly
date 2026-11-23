@@ -16,7 +16,7 @@ import { byId, setMeter, renderVotes, formatPercent } from '../ui.js';
 /**
  * Creates the Free Sign mode.
  * @param {Object} app - Shared app helpers and data (see main.js).
- * @returns {{enter:function, exit:function, onFrame:function}} The mode.
+ * @returns {{enter:function, exit:function, onFrame:function, handleShortcut:function}} The mode.
  */
 export function createFreeMode(app) {
   const smoother = new LetterSmoother();
@@ -48,18 +48,25 @@ export function createFreeMode(app) {
     message.textContent = text;
   }
 
-  byId('free-space').addEventListener('click', () => {
-    typedText += ' ';
+  /**
+   * Edits the typed text: adds a space, deletes one letter, or clears it all.
+   * @param {'space'|'backspace'|'clear'} edit - Which edit to make.
+   * @returns {void}
+   */
+  function editText(edit) {
+    if (edit === 'space') {
+      typedText += ' ';
+    } else if (edit === 'backspace') {
+      typedText = typedText.slice(0, -1);
+    } else if (edit === 'clear') {
+      typedText = '';
+    }
     showTypedText();
-  });
-  byId('free-backspace').addEventListener('click', () => {
-    typedText = typedText.slice(0, -1);
-    showTypedText();
-  });
-  byId('free-clear').addEventListener('click', () => {
-    typedText = '';
-    showTypedText();
-  });
+  }
+
+  byId('free-space').addEventListener('click', () => editText('space'));
+  byId('free-backspace').addEventListener('click', () => editText('backspace'));
+  byId('free-clear').addEventListener('click', () => editText('clear'));
 
   return {
     /** Called when this screen opens. @returns {void} */
@@ -76,6 +83,15 @@ export function createFreeMode(app) {
     /** Called when leaving this screen. @returns {void} */
     exit() {
       smoother.reset();
+    },
+
+    /**
+     * Handles a keyboard shortcut (see keyboard.js).
+     * @param {string} action - "space", "backspace", or "clear".
+     * @returns {void}
+     */
+    handleShortcut(action) {
+      editText(action);
     },
 
     /**

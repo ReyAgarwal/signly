@@ -234,3 +234,57 @@ export function mergeData(current, incoming) {
   };
   return { data: merged, addedSamples: newSamples.length, addedAttempts: newAttempts.length };
 }
+
+// ---------- Settings (saved separately, because they belong to this laptop) ----------
+
+/** The localStorage key for settings. */
+export const SETTINGS_KEY = 'aslFingerspellingCoach.settings';
+
+/** Settings used when nothing has been saved yet. */
+export const DEFAULT_SETTINGS = {
+  flipDiagrams: false,
+  autoAdvance: true,
+  spellPictureHints: true,
+};
+
+/**
+ * Loads settings, filling in defaults for anything missing or broken.
+ * @param {Storage|null} storage - Where to load from (defaults to the browser's localStorage).
+ * @returns {{flipDiagrams:boolean, autoAdvance:boolean, spellPictureHints:boolean}} The settings.
+ */
+export function loadSettings(storage = getBrowserStorage()) {
+  const settings = { ...DEFAULT_SETTINGS };
+  if (!storage) {
+    return settings;
+  }
+  try {
+    const saved = JSON.parse(storage.getItem(SETTINGS_KEY) ?? '{}');
+    // Only copy settings we know about, and only if they're true/false.
+    for (const name of Object.keys(DEFAULT_SETTINGS)) {
+      if (typeof saved[name] === 'boolean') {
+        settings[name] = saved[name];
+      }
+    }
+  } catch (error) {
+    // Broken settings aren't worth bothering the user about; just use the defaults.
+  }
+  return settings;
+}
+
+/**
+ * Saves settings. Failing to save settings is not serious, so errors are ignored.
+ * @param {Object} settings - The settings object.
+ * @param {Storage|null} storage - Where to save (defaults to the browser's localStorage).
+ * @returns {boolean} True if it was saved.
+ */
+export function saveSettings(settings, storage = getBrowserStorage()) {
+  if (!storage) {
+    return false;
+  }
+  try {
+    storage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}

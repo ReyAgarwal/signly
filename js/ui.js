@@ -11,8 +11,9 @@
  * so text from an imported file can never be run as code.
  */
 
-import { STATIC_LETTERS } from './letters.js';
+import { STATIC_LETTERS, LETTER_TIPS, LETTER_MIXUPS } from './letters.js';
 import { statsByLetter, statsByDay, letterHistory, overallStats } from './progress.js';
+import { createHandDiagram } from './diagram.js';
 
 /** Screens that use the webcam. */
 export const CAMERA_SCREENS = ['record', 'free', 'learn', 'spell'];
@@ -62,12 +63,13 @@ export function formatPercent(fraction) {
 
 /**
  * Shows one screen and hides the others. Camera modes share one layout.
- * @param {string} screenName - "home", "record", "free", "learn", "spell", "progress", or "data".
+ * @param {string} screenName - "home", "alphabet", "record", "free", "learn", "spell", "progress", or "data".
  * @returns {void}
  */
 export function showScreen(screenName) {
   const isCameraScreen = CAMERA_SCREENS.includes(screenName);
   byId('screen-home').hidden = screenName !== 'home';
+  byId('screen-alphabet').hidden = screenName !== 'alphabet';
   byId('screen-progress').hidden = screenName !== 'progress';
   byId('screen-data').hidden = screenName !== 'data';
   byId('screen-camera').hidden = !isCameraScreen;
@@ -134,36 +136,77 @@ export function setMeter(fillElement, fraction) {
 /**
  * Builds a grid of letter buttons (A, B, C, ... Y).
  * @param {HTMLElement} container - Where to put the buttons.
- * @param {{counts:Object<string,number>, selected:string|null,
- *   onPick:function(string):void, disableEmpty?:boolean, showCounts?:boolean}} options
+ * @param {{counts:Object<string,number>, selected:string|null, onPick:function(string):void,
+ *   showCounts?:boolean, mastered?:Set<string>}} options
  *   counts = samples per letter, selected = highlighted letter,
- *   onPick = called with the letter when clicked,
- *   disableEmpty = grey out letters with no samples.
+ *   onPick = called with the letter when clicked, showCounts = show the sample count,
+ *   mastered = letters signed correctly before (they get a check mark).
  * @returns {void}
  */
 export function renderLetterGrid(container, options) {
   container.replaceChildren();
+  const mastered = options.mastered ?? new Set();
   for (const letter of STATIC_LETTERS) {
     const count = options.counts[letter] ?? 0;
     const button = makeElement('button', 'letter-button');
     button.type = 'button';
     button.setAttribute('aria-pressed', String(letter === options.selected));
     button.append(makeElement('span', '', letter));
+    let label = letter + ', ' + count + ' samples';
 
     if (options.showCounts !== false) {
       button.append(makeElement('span', 'letter-count', String(count)));
-      button.setAttribute('aria-label', letter + ', ' + count + ' samples');
     }
+    // Green border = the coach can check this letter. Dashed = study the picture only.
     if (count > 0) {
       button.classList.add('has-samples');
+    } else {
+      button.classList.add('no-samples');
     }
-    if (options.disableEmpty && count === 0) {
-      button.disabled = true;
-      button.title = 'Record samples for ' + letter + ' first';
+    if (mastered.has(letter)) {
+      button.classList.add('mastered');
+      label += ', signed correctly before';
     }
+    button.setAttribute('aria-label', label);
 
     button.addEventListener('click', () => options.onPick(letter));
     container.append(button);
+  }
+}
+
+/**
+ * Fills the Alphabet screen with a card for every letter.
+ * @param {HTMLElement} container - The grid element.
+ * @param {{counts:Object<string,number>, mastered:Set<string>, flipX:boolean,
+ *   onPick:function(string):void}} options
+ *   counts = samples per letter, mastered = letters signed correctly before,
+ *   flipX = mirror the pictures, onPick = called when a card is clicked.
+ * @returns {void}
+ */
+export function renderAlphabetChart(container, options) {
+  container.replaceChildren();
+  for (const letter of STATIC_LETTERS) {
+    const card = makeElement('button', 'alphabet-card');
+    card.type = 'button';
+    card.setAttribute('aria-label', 'Practice the letter ' + letter);
+
+    const top = makeElement('div', 'card-top');
+    top.append(makeElement('span', 'card-letter', letter));
+    top.append(createHandDiagram(letter, { flipX: options.flipX }));
+    card.append(top);
+
+    card.append(makeElement('span', 'card-tip', LETTER_TIPS[letter]));
+    card.append(makeElement('span', 'mixup', LETTER_MIXUPS[letter]));
+
+    const count = options.counts[letter] ?? 0;
+    let status = count + ' samples recorded';
+    if (options.mastered.has(letter)) {
+      status += ' · ✓ signed correctly';
+    }
+    card.append(makeElement('span', 'card-status', status));
+
+    card.addEventListener('click', () => options.onPick(letter));
+    container.append(card);
   }
 }
 

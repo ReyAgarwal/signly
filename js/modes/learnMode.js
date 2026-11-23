@@ -3,20 +3,27 @@
  * ------------
  * The Learn screen: practice one letter at a time with live coaching.
  *
- *   1. Pick a target letter (only letters with recorded samples can be picked).
- *   2. A reference skeleton is drawn from that letter's template (the average
- *      of its recorded samples). No copyrighted pictures needed!
+ *   1. Pick a target letter (click it, type it, or press Enter for the next one).
+ *   2. A diagram shows how to make the handshape (drawn by diagram.js). If the
+ *      team recorded samples for this letter, a small skeleton also shows the
+ *      average of those samples.
  *   3. While you sign, the coach compares your finger bends to the template
- *      and tells you which finger to fix. That finger turns red.
- *   4. Hold the correct letter steady for 0.5 s: success animation!
+ *      (the average of the recorded samples) and tells you which finger to fix.
+ *      That finger turns red on the camera AND on the diagram.
+ *   4. Hold the correct letter steady for 0.5 s: success animation! With
+ *      auto-advance on, the next letter comes up by itself.
+ *
+ * Letters with no recorded samples can still be studied from the diagram,
+ * but the coach can't check them until someone records samples.
  *
  * Every locked-in letter is saved as a progress attempt (right or wrong).
  */
 
-import { STATIC_LETTERS, LETTER_TIPS } from '../letters.js';
+import { STATIC_LETTERS, LETTER_TIPS, LETTER_MIXUPS } from '../letters.js';
 import { LetterSmoother, majorityVote } from '../smoothing.js';
 import { findFingerToFix, hintMessage } from '../hints.js';
 import { drawReferenceHand } from '../draw.js';
+import { renderHandDiagram } from '../diagram.js';
 import { byId, setMeter, renderLetterGrid, showSuccessBurst, formatPercent } from '../ui.js';
 
 /** How many recent frames vote on which finger hint to show (stops flicker). */
@@ -25,91 +32,119 @@ const HINT_WINDOW = 12;
 /** After picking a letter, give the user this long to get their hand ready. */
 const GET_READY_MS = 1500;
 
+/** With auto-advance on, wait this long after a correct sign before moving on. */
+const AUTO_ADVANCE_DELAY_MS = 1800;
+
 /**
  * Creates the Learn mode.
  * @param {Object} app - Shared app helpers and data (see main.js).
- * @returns {{enter:function, exit:function, onFrame:function}} The mode.
+ * @returns {{enter:function, exit:function, onFrame:function, handleShortcut:function, selectLetter:function}} The mode.
  */
 export function createLearnMode(app) {
   const smoother = new LetterSmoother();
-  let targetLetter = null;
+  let targetLetter = STATIC_LETTERS[0];
   let recentHintFingers = [];
   let getReadyUntilMs = 0;
+  let autoAdvanceTimer = null;
+  let shownDiagramKey = '';
 
   const hintText = byId('learn-hint');
   const seeingText = byId('learn-seeing');
   const referenceCanvas = byId('reference-canvas');
+  const diagram = byId('learn-diagram');
+  const autoAdvanceBox = byId('learn-auto-advance');
+  const flipBox = byId('learn-flip');
 
   /**
-   * Picks a sensible target: keep the current one if it still has samples,
-   * otherwise use the first letter that has samples.
-   * @returns {string|null} The target letter, or null if nothing is recorded.
+   * Draws the diagram, but only if something changed (redrawing every frame is wasteful).
+   * @param {string|null} highlightFinger - Finger to draw in red, or null.
+   * @returns {void}
    */
-  function chooseStartingLetter() {
-    const recorded = app.recordedLetters();
-    if (targetLetter && recorded.includes(targetLetter)) {
-      return targetLetter;
+  function showDiagram(highlightFinger) {
+    const flipX = app.settings.flipDiagrams;
+    const key = targetLetter + '|' + highlightFinger + '|' + flipX;
+    if (key === shownDiagramKey) {
+      return;
     }
-    return recorded.length > 0 ? recorded[0] : null;
+    shownDiagramKey = key;
+    renderHandDiagram(diagram, targetLetter, { flipX, highlightFinger });
   }
 
   /**
-   * Switches to a new target letter and redraws everything for it.
-   * @param {string|null} letter - The new target.
+   * Redraws the letter picker (check marks change after a correct sign).
    * @returns {void}
    */
-  function setTarget(letter) {
-    targetLetter = letter;
-    smoother.reset();
-    recentHintFingers = [];
-    // Without this pause, whatever shape the hand is ALREADY holding would
-    // lock in right away and count as a wrong attempt for the new letter.
-    getReadyUntilMs = performance.now() + GET_READY_MS;
+  function showLetterGrid() {
     renderLetterGrid(byId('learn-letter-grid'), {
       counts: app.sampleCounts(),
       selected: targetLetter,
       onPick: setTarget,
-      disableEmpty: true,
       showCounts: false,
+      mastered: app.masteredLetters(),
     });
-
-    if (!targetLetter) {
-      byId('learn-letter').textContent = '?';
-      byId('learn-tip').textContent = '';
-      byId('reference-caption').textContent = 'No reference yet';
-      drawReferenceHand(referenceCanvas, null);
-      hintText.className = 'hint';
-      hintText.textContent = 'No samples recorded yet. Go to Record and record a few letters first.';
-      return;
-    }
-
-    const template = app.templates[targetLetter];
-    byId('learn-letter').textContent = targetLetter;
-    byId('learn-tip').textContent = LETTER_TIPS[targetLetter];
-    byId('reference-caption').textContent = 'Average of your ' + template.count + ' recorded ' + targetLetter + ' samples';
-    drawReferenceHand(referenceCanvas, template.points, { flipX: app.handMirrored });
-    hintText.className = 'hint';
-    hintText.textContent = 'Make the letter ' + targetLetter + ' and hold it steady.';
-    seeingText.textContent = '';
   }
 
   /**
-   * Moves to the next recorded letter in alphabet order (wrapping around).
+   * Shows either the live-checking area, or the "study only" notice for
+   * letters nobody has recorded yet.
+   * @param {Object|undefined} template - The letter's template, if it has samples.
    * @returns {void}
    */
-  function goToNextLetter() {
-    const recorded = app.recordedLetters();
-    if (recorded.length === 0) {
+  function showCheckingArea(template) {
+    const hasSamples = Boolean(template);
+    byId('learn-check').hidden = !hasSamples;
+    byId('learn-no-samples').hidden = hasSamples;
+
+    if (hasSamples) {
+      byId('reference-caption').textContent = 'Average of your ' + template.count + ' samples';
+      drawReferenceHand(referenceCanvas, template.points, { flipX: app.handMirrored });
+      hintText.className = 'hint';
+      hintText.textContent = 'Make the letter ' + targetLetter + ' and hold it steady.';
       return;
     }
-    const currentPosition = STATIC_LETTERS.indexOf(targetLetter);
-    for (let step = 1; step <= STATIC_LETTERS.length; step++) {
-      const candidate = STATIC_LETTERS[(currentPosition + step) % STATIC_LETTERS.length];
-      if (recorded.includes(candidate)) {
-        setTarget(candidate);
-        return;
-      }
-    }
+    byId('reference-caption').textContent = 'No samples yet';
+    drawReferenceHand(referenceCanvas, null);
+    byId('learn-no-samples-text').textContent = 'Study the picture! The coach can\'t check ' + targetLetter
+      + ' yet because no samples of it have been recorded.';
+    byId('learn-record-this').textContent = '⏺ Record ' + targetLetter + ' now';
+  }
+
+  /**
+   * Switches to a new target letter and redraws everything for it.
+   * @param {string} letter - The new target.
+   * @returns {void}
+   */
+  function setTarget(letter) {
+    clearTimeout(autoAdvanceTimer);
+    targetLetter = letter;
+    smoother.reset();
+    recentHintFingers = [];
+    setMeter(byId('learn-hold-bar'), 0);
+    seeingText.textContent = '';
+    // Without this pause, whatever shape the hand is ALREADY holding would
+    // lock in right away and count as a wrong attempt for the new letter.
+    getReadyUntilMs = performance.now() + GET_READY_MS;
+
+    const position = STATIC_LETTERS.indexOf(letter) + 1;
+    byId('learn-position').textContent = '· letter ' + position + ' of ' + STATIC_LETTERS.length;
+    byId('learn-letter').textContent = letter;
+    byId('learn-tip').textContent = LETTER_TIPS[letter];
+    byId('learn-mixup').textContent = LETTER_MIXUPS[letter];
+    showLetterGrid();
+    showDiagram(null);
+    showCheckingArea(app.templates[letter]);
+  }
+
+  /**
+   * Moves forward or backward through the alphabet (wrapping around).
+   * @param {number} step - +1 for the next letter, -1 for the previous one.
+   * @returns {void}
+   */
+  function moveLetter(step) {
+    const count = STATIC_LETTERS.length;
+    const index = STATIC_LETTERS.indexOf(targetLetter);
+    // Adding "count" before % keeps the result positive when going back from A.
+    setTarget(STATIC_LETTERS[(index + step + count) % count]);
   }
 
   /**
@@ -132,29 +167,85 @@ export function createLearnMode(app) {
   }
 
   /**
-   * Handles a letter that just locked in: success or "try again".
+   * Handles a letter that just locked in: success (maybe auto-advance) or "try again".
    * @param {string} lockedLetter - The letter the smoother locked in.
    * @returns {void}
    */
   function handleLock(lockedLetter) {
     const correct = lockedLetter === targetLetter;
     app.recordAttempt(targetLetter, correct, 'learn');
-    if (correct) {
-      showSuccessBurst('You signed ' + targetLetter + '!');
+    if (!correct) {
+      return;
+    }
+    showSuccessBurst('You signed ' + targetLetter + '!');
+    showLetterGrid();
+    if (app.settings.autoAdvance) {
+      autoAdvanceTimer = setTimeout(() => moveLetter(1), AUTO_ADVANCE_DELAY_MS);
     }
   }
 
-  byId('learn-next').addEventListener('click', goToNextLetter);
+  /**
+   * Shows the "looks right" message instead of a finger hint.
+   * @param {number} holdProgress - 0 to 1, from the smoother.
+   * @returns {void}
+   */
+  function showLooksRight(holdProgress) {
+    hintText.className = 'hint good';
+    if (holdProgress < 1) {
+      hintText.textContent = 'Looks like ' + targetLetter + '! Hold it steady...';
+    } else if (app.settings.autoAdvance) {
+      hintText.textContent = 'Correct! Next letter coming up...';
+    } else {
+      hintText.textContent = 'Correct! Press Enter for the next letter.';
+    }
+  }
+
+  byId('learn-next').addEventListener('click', () => moveLetter(1));
+  byId('learn-previous').addEventListener('click', () => moveLetter(-1));
+  byId('learn-record-this').addEventListener('click', () => app.openRecord(targetLetter));
+  autoAdvanceBox.addEventListener('change', () => app.setSetting('autoAdvance', autoAdvanceBox.checked));
+  flipBox.addEventListener('change', () => {
+    app.setSetting('flipDiagrams', flipBox.checked);
+    showDiagram(null);
+  });
 
   return {
     /** Called when this screen opens. @returns {void} */
     enter() {
-      setTarget(chooseStartingLetter());
+      autoAdvanceBox.checked = app.settings.autoAdvance;
+      flipBox.checked = app.settings.flipDiagrams;
+      shownDiagramKey = '';
+      setTarget(targetLetter);
     },
 
     /** Called when leaving this screen. @returns {void} */
     exit() {
+      clearTimeout(autoAdvanceTimer);
       smoother.reset();
+    },
+
+    /**
+     * Jumps to a letter (used by the Alphabet screen).
+     * @param {string} letter - The letter to practice.
+     * @returns {void}
+     */
+    selectLetter(letter) {
+      targetLetter = letter;
+    },
+
+    /**
+     * Handles a keyboard shortcut (see keyboard.js).
+     * @param {string} action - e.g. "next-letter" or "pick:B".
+     * @returns {void}
+     */
+    handleShortcut(action) {
+      if (action === 'next-letter') {
+        moveLetter(1);
+      } else if (action === 'previous-letter') {
+        moveLetter(-1);
+      } else if (action.startsWith('pick:')) {
+        setTarget(action.slice(5));
+      }
     },
 
     /**
@@ -164,10 +255,11 @@ export function createLearnMode(app) {
      * @returns {{highlightFinger:string|null}} The finger to draw in red.
      */
     onFrame(hand, nowMs) {
-      if (!targetLetter) {
+      const template = app.templates[targetLetter];
+      // No samples for this letter = study only; the coach can't check it.
+      if (!template) {
         return { highlightFinger: null };
       }
-      const template = app.templates[targetLetter];
       // During the get-ready pause we keep clearing the smoother, so nothing can lock in.
       if (nowMs < getReadyUntilMs) {
         smoother.reset();
@@ -179,6 +271,7 @@ export function createLearnMode(app) {
         seeingText.textContent = '';
         hintText.className = 'hint';
         hintText.textContent = 'Show your hand to the camera.';
+        showDiagram(null);
         return { highlightFinger: null };
       }
 
@@ -186,14 +279,14 @@ export function createLearnMode(app) {
       if (smooth.lockedLetter) {
         handleLock(smooth.lockedLetter);
       }
+      drawReferenceHand(referenceCanvas, template.points, { flipX: hand.mirrored });
 
       // Signing the right letter? Then no finger hint, just encouragement.
       const looksRight = guess.letter === targetLetter && guess.confidence >= app.minConfidence;
       if (looksRight) {
         recentHintFingers = [];
-        hintText.className = 'hint good';
-        hintText.textContent = smooth.holdProgress >= 1 ? 'Correct! That\'s ' + targetLetter + '. Press Next letter.' : 'Looks like ' + targetLetter + '! Hold it steady...';
-        drawReferenceHand(referenceCanvas, template.points, { flipX: hand.mirrored });
+        showLooksRight(smooth.holdProgress);
+        showDiagram(null);
         return { highlightFinger: null };
       }
 
@@ -202,7 +295,7 @@ export function createLearnMode(app) {
       hintText.className = 'hint';
       hintText.textContent = hintMessage(fix);
       const highlightFinger = fix ? fix.finger : null;
-      drawReferenceHand(referenceCanvas, template.points, { flipX: hand.mirrored, highlightFinger });
+      showDiagram(highlightFinger);
       return { highlightFinger };
     },
   };

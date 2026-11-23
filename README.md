@@ -19,13 +19,36 @@ signing, tells you which finger to fix, and tracks your progress over time.
 
 | Screen | What it does |
 |--------|--------------|
-| **Home** | Big buttons for every mode, plus a status line ("120 samples recorded for 4 letters...") |
-| **Record** | Pick a letter, press Record, and the coach saves ~30 snapshots of your hand in 3 seconds. Shows the sample count for every letter, and lets you delete a letter's samples. |
+| **Home** | Big buttons for every mode, a status line ("120 samples recorded for 4 letters..."), and a list of keyboard shortcuts |
+| **Alphabet** | A **diagram of every handshape**, with how-to text and a "Watch out" note about the letter it's most often confused with. Click or type a letter to practice it. Can be flipped for left-handed signers, and printed as a study sheet. |
+| **Record** | Pick a letter (the diagram shows the shape to make), press Record or Space, and the coach saves ~30 snapshots of your hand in 3 seconds. Shows the sample count for every letter, and lets you delete a letter's samples. |
 | **Free Sign** | Sign anything. Shows the recognized letter, the confidence %, the actual k-NN neighbor votes, and types out letters you hold steady. |
-| **Learn** | Pick a target letter. A reference skeleton (the average of your recorded samples) is drawn next to the video. Live hints tell you which finger to fix and draw that finger in **red**. Hold the right letter for half a second to get a success animation. |
-| **Spell-a-Word** | 60-second game: spell short words letter by letter. +10 per letter, +20 per word. Saves your best score. |
+| **Learn** | Pick a target letter. A **diagram** shows how to make it, next to a skeleton of the average of your recorded samples. Live hints tell you which finger to fix and draw that finger in **red** on the camera *and* the diagram. Hold the right letter for half a second to get a success animation, then it moves to the next letter automatically (or press **Enter**). Letters with no samples yet can still be studied from the diagram. |
+| **Spell-a-Word** | 60-second game: spell short words letter by letter, with a small picture of the next letter (can be turned off). +10 per letter, +20 per word. Saves your best score. |
 | **Progress** | Accuracy for every letter, and for every day, so you can see improvement over time. |
 | **Test & Data** | **Accuracy test** (hides 20% of samples, measures accuracy, shows which letters get confused) and **Export/Import** of all data as a JSON file. |
+
+### Keyboard shortcuts
+
+Your hands are busy signing, so most things work from the keyboard:
+
+| Where | Keys |
+|-------|------|
+| Anywhere | `1`–`7` open a screen (same order as the menu) · `Esc` Home |
+| Alphabet | Type a letter to practice it in Learn |
+| Record | `Space` or `Enter` record · `←` `→` change letter · type a letter to pick it |
+| Learn | `Enter` or `→` next letter · `←` previous letter · type a letter to jump to it |
+| Free Sign | `Space` add a space · `Backspace` delete · `Delete` clear |
+| Spell | `Enter` start / play again · `→` skip word |
+
+### About the diagrams
+
+The handshape diagrams are **drawn by our own code**, not copied from a chart:
+`handPoses.js` describes each letter with a few numbers (how much each finger
+bends, where the thumb points, how the hand is turned), `handModel.js` turns
+those numbers into a 3D hand, and `diagram.js` draws it. Each picture shows a
+**right hand as you'll see it in the mirror video**, with the same finger
+colors as the live skeleton. See `docs/HOW_IT_WORKS.md` for the math.
 
 ---
 
@@ -61,12 +84,13 @@ Everything the app needs is inside this folder:
 
 The coach doesn't know any letters until you teach it:
 
-1. Go to **Record**.
-2. Click a letter (start with **A**), make the sign, press **Record (3 sec)**.
+1. Look through the **Alphabet** screen to see each handshape.
+2. Go to **Record**.
+3. Click a letter (start with **A**), copy the diagram, and press **Record (3 sec)** (or `Space`).
    After the 3-2-1 countdown, move your hand slightly while it records.
-3. Do this 2 or 3 times per letter (aim for 30–60+ samples per letter).
-4. For best results, have **several teammates** record, and use **both hands**.
-5. Go to **Test & Data → Export** to back up your samples. Share the file so
+4. Do this 2 or 3 times per letter (aim for 30–60+ samples per letter). Press `→` for the next letter.
+5. For best results, have **several teammates** record, and use **both hands**.
+6. Go to **Test & Data → Export** to back up your samples. Share the file so
    teammates can **Import** it (imports are merged, and duplicates are skipped).
 
 ---
@@ -79,7 +103,7 @@ The unit tests use Node's built-in test runner. **There is nothing to install.**
 node --test          # or: npm test
 ```
 
-There are 56 tests in `tests/`:
+There are 72 tests in `tests/`:
 
 | Test file | What it checks |
 |-----------|----------------|
@@ -88,6 +112,8 @@ There are 56 tests in `tests/`:
 | `hints.test.js` | Angles: vector angles, joint bends, finger bends, templates, which finger to fix, hint wording |
 | `smoothing.test.js` | Majority vote, hold-to-lock timing, one lock per hold, reset for double letters |
 | `games-progress-storage.test.js` | Spell-a-Word scoring and timer, progress statistics, saving, loading, import/export |
+| `handModel.test.js` | Diagram hand model: bone lengths, rotations, the thumb really touching the fingertip in F/O/D/W, A/S/T thumbs in different places, back-to-front drawing order |
+| `keyboard-settings.test.js` | Which key does what on each screen, not stealing keys from buttons/text boxes, saving settings |
 
 `tests/helpers/fakeHand.js` builds pretend hands with exact, known finger bends,
 so the tests never need a camera.
@@ -114,10 +140,14 @@ js/
   storage.js                localStorage save/load (with try/catch) + JSON export/import
   ui.js                     Page helpers: screens, banners, letter grid, tables, animation
   draw.js                   Draws the hand skeleton (live + reference), red highlight
-  letters.js                The 24 letters + a written description of each handshape
+  letters.js                The 24 letters, a description of each handshape, and common mix-ups
+  handPoses.js              DIAGRAM RECIPES: finger bends + thumb + hand angle for each letter
+  handModel.js              Turns a recipe into a 3D hand (21 points), using rotations
+  diagram.js                Draws the 3D hand as an SVG picture (back-to-front)
+  keyboard.js               Decides what each key press means on each screen
   modes/recordMode.js       Record Samples screen
   modes/freeMode.js         Free Sign screen
-  modes/learnMode.js        Learn screen
+  modes/learnMode.js        Learn screen (diagram, hints, auto-advance)
   modes/spellMode.js        Spell-a-Word screen
 
 tests/                      Unit tests (node --test)

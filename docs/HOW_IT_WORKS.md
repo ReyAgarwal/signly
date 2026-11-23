@@ -361,3 +361,71 @@ Every time a letter locks in during **Learn** or **Spell-a-Word**, we save an
 - **Recent days per letter:** accuracy on each of that letter's last 5 practice days
 
 Up to 5,000 attempts are kept (the oldest are dropped first).
+
+---
+
+## How the handshape diagrams are drawn (handPoses.js → handModel.js → diagram.js)
+
+The Alphabet, Record, Learn, and Spell screens show a picture of each
+handshape. We didn't copy these from an ASL chart (that could break
+copyright). Instead, the computer **builds a 3D puppet hand and draws it**.
+
+### 1. A recipe for each letter (handPoses.js)
+
+Each letter is described with a few numbers. For example, **V**:
+
+```js
+V: {
+  view: [['y', 15]],                       // turn the hand 15° so you can see the thumb side
+  fingers: {
+    index:  { spread: -13, flex: [0, 0, 0] },    // straight, tilted 13° toward the thumb
+    middle: { spread: 10,  flex: [0, 0, 0] },    // straight, tilted 10° toward the pinky
+    ring:   { spread: 3,   flex: [88, 100, 65] },// curled into the palm
+    pinky:  { spread: 6,   flex: [88, 100, 65] },
+  },
+  thumb: { ... },                          // holding down the ring and pinky
+}
+```
+
+`flex` is the bend at each of the finger's 3 joints in degrees, the same
+idea as the finger-bend angles the hints use.
+
+### 2. Building the 3D hand (handModel.js)
+
+- **Fingers:** start at the knuckle and walk along each bone. Each joint's
+  bend **adds** to the ones before it, just like a real finger: if the knuckle
+  bends 90°, everything after it already points 90° away. The direction of a
+  bone bent by a total angle θ is `up × cos(θ) + palm-side × sin(θ)`, which is
+  the unit circle from trig class.
+- **Thumb reaching a fingertip (F, O, D):** this is *two-bone inverse
+  kinematics*. We know where the thumb's knuckle is and where its tip must go.
+  The two thumb bones and the line between those points make a triangle, so the
+  **law of cosines** (c² = a² + b² − 2ab·cos C) tells us the angle at the knuckle,
+  and therefore where the middle joint goes.
+- **Turning the hand (G, H, P, Q, C, O, X):** we rotate every point with the
+  standard rotation formulas, for example around the y axis:
+  `x' = x·cos θ + z·sin θ`, `z' = −x·sin θ + z·cos θ`.
+
+The result is 21 points in the **same order MediaPipe uses**, so the same
+"which finger is which" code works for both.
+
+### 3. Drawing it (diagram.js)
+
+- We flatten 3D to 2D by keeping x and y. z (depth) is only used to decide
+  **what's in front**.
+- Each bone is drawn as a thick rounded line with a dark outline. The palm is a
+  rounded shape.
+- **Painter's algorithm:** sort all the shapes from farthest to closest, and
+  draw them in that order. Closer shapes cover farther ones, like stacking paper.
+  For a few letters where the exact depth is too close to call (S, M, N, T), the
+  recipe says whether the thumb goes in front of or behind the fingers.
+- Fingernails are drawn only when the nail faces the viewer, which helps you
+  tell the back of the hand from the palm.
+- Colors match the live skeleton (thumb yellow, index green, middle blue,
+  ring purple, pinky teal), and the finger a hint is about turns **red**.
+
+**Important:** the recipes are our best approximation of each handshape. Check
+them against a trusted ASL resource or a fluent signer, and adjust the numbers in
+`handPoses.js` if a picture looks off. The unit tests in `tests/handModel.test.js`
+will tell you if a change breaks something (for example, if the thumb in F no
+longer touches the index finger).

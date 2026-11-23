@@ -11,6 +11,7 @@ import {
   chooseGameWords, createSpellGame, currentWord, currentTargetLetter,
   submitLetter, goToNextWord, timeLeftMs, isGameOver, GAME_DURATION_MS,
 } from '../games.js';
+import { renderHandDiagram } from '../diagram.js';
 import { byId, makeElement, setMeter, showSuccessBurst } from '../ui.js';
 
 /** After pressing Start, give the player this long to get their hand ready. */
@@ -19,7 +20,7 @@ const GET_READY_MS = 1500;
 /**
  * Creates the Spell-a-Word mode.
  * @param {Object} app - Shared app helpers and data (see main.js).
- * @returns {{enter:function, exit:function, onFrame:function}} The mode.
+ * @returns {{enter:function, exit:function, onFrame:function, handleShortcut:function}} The mode.
  */
 export function createSpellMode(app) {
   const smoother = new LetterSmoother();
@@ -29,6 +30,8 @@ export function createSpellMode(app) {
   const startButton = byId('spell-start');
   const skipButton = byId('spell-skip');
   const feedback = byId('spell-feedback');
+  const pictureBox = byId('spell-picture-hints');
+  const diagram = byId('spell-diagram');
 
   /**
    * Shows a feedback message in green (good), red (bad), or normal.
@@ -67,6 +70,22 @@ export function createSpellMode(app) {
     }
     const target = currentTargetLetter(game);
     byId('spell-target-tip').textContent = 'Next: ' + target + '. ' + LETTER_TIPS[target];
+    showPictureHint(target);
+  }
+
+  /**
+   * Shows a small diagram of the letter to sign next (if picture hints are on).
+   * @param {string|null} letter - The next letter, or null to hide the picture.
+   * @returns {void}
+   */
+  function showPictureHint(letter) {
+    const show = letter !== null && app.settings.spellPictureHints;
+    // <svg> elements don't support ".hidden = true" like HTML elements do,
+    // so we add or remove the hidden attribute directly.
+    diagram.toggleAttribute('hidden', !show);
+    if (show) {
+      renderHandDiagram(diagram, letter, { flipX: app.settings.flipDiagrams });
+    }
   }
 
   /**
@@ -131,6 +150,7 @@ export function createSpellMode(app) {
     skipButton.disabled = true;
     setMeter(byId('spell-hold-bar'), 0);
     byId('spell-target-tip').textContent = '';
+    showPictureHint(null);
     renderWord();
     say(message, 'good');
   }
@@ -173,8 +193,11 @@ export function createSpellMode(app) {
     renderWord();
   }
 
-  startButton.addEventListener('click', startGame);
-  skipButton.addEventListener('click', () => {
+  /**
+   * Skips to the next word (does nothing if no game is running).
+   * @returns {void}
+   */
+  function skipWord() {
     if (!game) {
       return;
     }
@@ -182,11 +205,19 @@ export function createSpellMode(app) {
     smoother.reset();
     say('Skipped. Here\'s a new word.');
     renderWord();
+  }
+
+  startButton.addEventListener('click', startGame);
+  skipButton.addEventListener('click', skipWord);
+  pictureBox.addEventListener('change', () => {
+    app.setSetting('spellPictureHints', pictureBox.checked);
+    showPictureHint(game ? currentTargetLetter(game) : null);
   });
 
   return {
     /** Called when this screen opens. @returns {void} */
     enter() {
+      pictureBox.checked = app.settings.spellPictureHints;
       renderScoreboard(performance.now());
       if (app.data.samples.length === 0) {
         say('No samples recorded yet. Go to Record and record some letters first.', 'bad');
@@ -198,6 +229,19 @@ export function createSpellMode(app) {
     /** Called when leaving this screen: the game ends. @returns {void} */
     exit() {
       endGame();
+    },
+
+    /**
+     * Handles a keyboard shortcut (see keyboard.js).
+     * @param {string} action - "start" or "skip".
+     * @returns {void}
+     */
+    handleShortcut(action) {
+      if (action === 'start' && !game) {
+        startGame();
+      } else if (action === 'skip') {
+        skipWord();
+      }
     },
 
     /**

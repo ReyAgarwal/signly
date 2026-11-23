@@ -46,6 +46,34 @@ export const LETTER_TIPS = {
   Y: 'Stick out your thumb and pinky. Curl the three middle fingers down.',
 };
 
+/** The most common mistake for each letter, and the letter it gets confused with. */
+export const LETTER_MIXUPS = {
+  A: 'Thumb goes on the SIDE of the fist. Thumb across the front is S.',
+  B: 'Keep the four fingers together and the thumb folded in.',
+  C: 'Leave a gap between thumb and fingers. Closed all the way is O.',
+  D: 'Only the index points up. The other fingertips touch the thumb.',
+  E: 'Fingertips rest on the thumb. A tight fist with the thumb across is S.',
+  F: 'Index fingertip touches the thumb tip; the other three fingers stay up.',
+  G: 'Index and thumb point sideways. Two fingers sideways is H.',
+  H: 'Two fingers point sideways. Two fingers pointing up is U.',
+  I: 'Only the pinky is up. Pinky AND thumb out is Y.',
+  K: 'The thumb touches the middle finger between the raised fingers. Without it, it looks like V.',
+  L: 'Thumb and index make a right angle, like the letter L.',
+  M: 'Three fingers over the thumb. Two fingers is N.',
+  N: 'Two fingers over the thumb. Three fingers is M.',
+  O: 'All fingertips touch the thumb. With a gap, it is C.',
+  P: 'Like K, but pointing down.',
+  Q: 'Like G, but pointing down.',
+  R: 'Cross the fingers. Side by side is U.',
+  S: 'Thumb across the FRONT. On the side is A; poking between fingers is T.',
+  T: 'Only the thumb TIP pokes out, between the index and middle fingers.',
+  U: 'Fingers together. Spread apart is V.',
+  V: 'Fingers spread apart. Together is U.',
+  W: 'Three fingers up and spread; the thumb holds down the pinky.',
+  X: 'The index is bent like a hook, not straight up.',
+  Y: 'Thumb and pinky out. Only the pinky is I.',
+};
+
 /**
  * Checks whether a value is one of the 24 letters this app supports.
  * @param {string} letter - The value to check, for example "B".

@@ -7,7 +7,8 @@
  *   3. Starts the webcam and hand tracker when a camera screen opens.
  *   4. Runs the "frame loop": for every new video frame, find the hand,
  *      normalize it, hand it to the active mode, and draw the skeleton.
- *   5. Wires up the Progress and Test & Data screens.
+ *   5. Wires up the Alphabet, Progress, and Test & Data screens.
+ *   6. Sends keyboard shortcuts (keyboard.js) to the right place.
  *
  * The "app" object below is shared with every mode. It holds the data and
  * small helper functions, so modes don't each need to know about storage.
@@ -20,12 +21,13 @@ import { allFingerBends, buildAllTemplates } from './hints.js';
 import { STATIC_LETTERS } from './letters.js';
 import { addAttempt, makeAttempt } from './progress.js';
 import {
-  loadData, saveData, emptyData, makeExportJson, parseImportJson, mergeData,
+  loadData, saveData, emptyData, makeExportJson, parseImportJson, mergeData, loadSettings, saveSettings,
 } from './storage.js';
 import {
-  byId, showScreen, showBanner, hideBanner, setCameraStatus, renderProgress,
+  byId, showScreen, showBanner, hideBanner, setCameraStatus, renderProgress, renderAlphabetChart,
   renderAccuracyReport, makeConfirmButton, downloadTextFile, CAMERA_SCREENS,
 } from './ui.js';
+import { shortcutFor } from './keyboard.js';
 import { drawLiveHand, clearCanvas, matchCanvasToVideo } from './draw.js';
 import { createRecordMode } from './modes/recordMode.js';
 import { createFreeMode } from './modes/freeMode.js';
@@ -45,6 +47,7 @@ const NO_HAND_MESSAGE = 'No hand detected. Hold one hand up inside the video, ab
 const app = {
   data: emptyData(),
   templates: {},
+  settings: loadSettings(),
   minConfidence: MIN_CONFIDENCE,
   // Remembers whether the last hand seen was mirrored, so Learn mode can
   // draw the reference hand the same way around as the user's hand.
@@ -57,6 +60,9 @@ const app = {
   recordAttempt: recordAttempt,
   setBestSpellScore: setBestSpellScore,
   recognize: recognize,
+  masteredLetters: listMasteredLetters,
+  setSetting: setSetting,
+  openRecord: (letter) => openModeWithLetter('record', letter),
 };
 
 // ---------- Camera and tracker state ----------
@@ -112,6 +118,46 @@ function countSamplesPerLetter() {
 function listRecordedLetters() {
   const counts = countSamplesPerLetter();
   return STATIC_LETTERS.filter((letter) => counts[letter] > 0);
+}
+
+/**
+ * Lists letters the user has signed correctly at least once (shown with a check mark).
+ * @returns {Set<string>} The letters.
+ */
+function listMasteredLetters() {
+  const letters = new Set();
+  for (const attempt of app.data.attempts) {
+    if (attempt.correct) {
+      letters.add(attempt.letter);
+    }
+  }
+  return letters;
+}
+
+/**
+ * Changes one setting and saves it.
+ * @param {string} name - e.g. "autoAdvance".
+ * @param {boolean} value - The new value.
+ * @returns {void}
+ */
+function setSetting(name, value) {
+  app.settings[name] = value;
+  saveSettings(app.settings);
+}
+
+/**
+ * Opens Record or Learn with a letter already chosen.
+ * @param {'record'|'learn'} screenName - Which screen.
+ * @param {string} letter - The letter to select.
+ * @returns {void}
+ */
+function openModeWithLetter(screenName, letter) {
+  modes[screenName].selectLetter(letter);
+  if (currentScreen === screenName) {
+    goTo(screenName);
+  } else {
+    window.location.hash = screenName;
+  }
 }
 
 /**
@@ -279,10 +325,10 @@ function updateNoHandMessage(handVisible, nowMs) {
 function frameLoop() {
   requestAnimationFrame(frameLoop);
 
-  const video = byId('video');
   if (cameraState !== 'ready' || !CAMERA_SCREENS.includes(currentScreen)) {
     return;
   }
+  const video = byId('video');
   // readyState 2 or more means the video has a picture we can read.
   // Skipping repeated frames saves work when the screen refreshes faster than the camera.
   if (video.readyState < 2 || video.currentTime === lastVideoTime) {
@@ -329,10 +375,24 @@ function renderHome() {
   const letters = listRecordedLetters();
   const status = byId('home-status');
   if (letters.length === 0) {
-    status.textContent = 'Start here: open Record Samples and record at least 3 letters (for example A, B, and L). The coach learns from YOUR hands.';
+    status.textContent = 'Start here: look through the Alphabet, then open Record Samples and record at least 3 letters (for example A, B, and L). The coach learns from YOUR hands.';
     return;
   }
   status.textContent = app.data.samples.length + ' samples recorded for ' + letters.length + ' letters (' + letters.join(', ') + '). Try Free Sign or Learn!';
+}
+
+/**
+ * Draws the Alphabet chart (all 24 diagrams).
+ * @returns {void}
+ */
+function renderAlphabet() {
+  byId('alphabet-flip').checked = app.settings.flipDiagrams;
+  renderAlphabetChart(byId('alphabet-grid'), {
+    counts: countSamplesPerLetter(),
+    mastered: listMasteredLetters(),
+    flipX: app.settings.flipDiagrams,
+    onPick: (letter) => openModeWithLetter('learn', letter),
+  });
 }
 
 /**
@@ -366,6 +426,9 @@ function goTo(screenName) {
   if (screenName === 'home') {
     renderHome();
   }
+  if (screenName === 'alphabet') {
+    renderAlphabet();
+  }
   if (screenName === 'progress') {
     renderProgress(app.data.attempts, app.data.bestSpellScore);
   }
@@ -382,7 +445,7 @@ function goTo(screenName) {
  */
 function screenFromAddress() {
   const name = window.location.hash.replace('#', '');
-  const validScreens = ['home', 'progress', 'data', ...CAMERA_SCREENS];
+  const validScreens = ['home', 'alphabet', 'progress', 'data', ...CAMERA_SCREENS];
   return validScreens.includes(name) ? name : 'home';
 }
 
@@ -447,6 +510,34 @@ async function importData(event) {
     + merged.addedAttempts + ' practice attempts (duplicates were skipped).';
 }
 
+// ---------- Keyboard ----------
+
+/**
+ * Handles every key press: works out the shortcut, then does it.
+ * @param {KeyboardEvent} event - The key press.
+ * @returns {void}
+ */
+function onKeyDown(event) {
+  const action = shortcutFor(event, currentScreen);
+  if (!action) {
+    return;
+  }
+  // Stop the browser's own behavior (for example, Space scrolling the page).
+  event.preventDefault();
+
+  if (action.startsWith('go:')) {
+    window.location.hash = action.slice(3);
+    return;
+  }
+  if (currentScreen === 'alphabet' && action.startsWith('pick:')) {
+    openModeWithLetter('learn', action.slice(5));
+    return;
+  }
+  if (modes[currentScreen]) {
+    modes[currentScreen].handleShortcut(action);
+  }
+}
+
 // ---------- Start-up ----------
 
 /**
@@ -461,7 +552,13 @@ function setUpEventListeners() {
   }
   window.addEventListener('hashchange', () => goTo(screenFromAddress()));
 
+  document.addEventListener('keydown', onKeyDown);
   byId('banner-close').addEventListener('click', hideBanner);
+  byId('alphabet-print').addEventListener('click', () => window.print());
+  byId('alphabet-flip').addEventListener('change', () => {
+    setSetting('flipDiagrams', byId('alphabet-flip').checked);
+    renderAlphabet();
+  });
   byId('camera-retry').addEventListener('click', ensureCameraRunning);
   byId('accuracy-run').addEventListener('click', runAccuracyTest);
   byId('export-button').addEventListener('click', exportData);

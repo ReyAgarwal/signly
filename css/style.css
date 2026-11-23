@@ -627,17 +627,17 @@ main {
 }
 
 #reference-canvas {
-  width: 220px;
-  height: 220px;
+  width: 130px;
+  height: 130px;
   border-radius: var(--radius);
   background: #111827;
   transform: scaleX(-1);
 }
 
 .reference figcaption {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
-  max-width: 220px;
+  max-width: 130px;
 }
 
 /* Spell game */
@@ -818,4 +818,268 @@ main {
   cursor: pointer;
   font-weight: 700;
   color: var(--primary);
+}
+
+/* ---------- Handshape diagrams ---------- */
+
+.hand-diagram {
+  display: block;
+  background: #ffffff;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.hand-diagram.large { width: 230px; height: 230px; }
+.hand-diagram.medium { width: 140px; height: 140px; flex-shrink: 0; }
+.hand-diagram.small { width: 110px; height: 110px; flex-shrink: 0; }
+
+.diagram-figure {
+  margin: 0;
+  text-align: center;
+}
+
+.diagram-figure figcaption {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.mixup {
+  font-size: 1rem;
+  padding: 6px 10px;
+  border-left: 5px solid #f59e0b;
+  background: var(--warning-light);
+  color: var(--warning-text);
+  border-radius: 6px;
+}
+
+.mixup:empty {
+  display: none;
+}
+
+.mixup::before {
+  content: "Watch out: ";
+  font-weight: 800;
+}
+
+.notice {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 2px dashed var(--primary);
+  background: var(--primary-light);
+  font-weight: 600;
+}
+
+.toggle-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.toggle input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--primary);
+}
+
+.keyboard-hint {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border: 1px solid #9ca3af;
+  border-bottom-width: 3px;
+  border-radius: 6px;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 0.85em;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text);
+}
+
+.shortcuts {
+  max-width: 900px;
+}
+
+.spell-hint-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.target-box {
+  text-align: center;
+}
+
+.learn-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.big-letter.compact {
+  width: 110px;
+  height: 110px;
+  font-size: 4.5rem;
+}
+
+/* Letter grid states: green border = has samples, dashed = study only, check = signed correctly before */
+.letter-button.no-samples {
+  border-style: dashed;
+}
+
+.letter-button.no-samples:not([aria-pressed="true"]) {
+  color: var(--text-muted);
+}
+
+.letter-button.mastered::after {
+  content: "✓";
+  font-size: 0.75rem;
+  color: var(--success);
+  line-height: 1;
+}
+
+.letter-button[aria-pressed="true"].mastered::after {
+  color: #ffffff;
+}
+
+/* ---------- Alphabet chart ---------- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-weight: 600;
+  margin: 8px 0;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #1f2937;
+}
+
+.swatch.thumb { background: #fde68a; }
+.swatch.index { background: #bbf7d0; }
+.swatch.middle { background: #bae6fd; }
+.swatch.ring { background: #ddd6fe; }
+.swatch.pinky { background: #99f6e4; }
+
+.note {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.alphabet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.alphabet-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.alphabet-card:hover {
+  border-color: var(--primary);
+}
+
+.alphabet-card .card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alphabet-card .card-letter {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--primary-dark);
+  min-width: 48px;
+}
+
+.alphabet-card .hand-diagram {
+  width: 150px;
+  height: 150px;
+  border: none;
+}
+
+.alphabet-card .card-tip {
+  font-size: 0.95rem;
+}
+
+.alphabet-card .mixup {
+  font-size: 0.85rem;
+}
+
+.alphabet-card .card-status {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* ---------- Printing the alphabet chart ---------- */
+
+@media print {
+  .topbar, .banner, .no-print, .lead, .note {
+    display: none !important;
+  }
+  body {
+    background: #ffffff;
+    font-size: 12px;
+  }
+  .alphabet-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .alphabet-card {
+    box-shadow: none;
+    break-inside: avoid;
+    padding: 6px;
+  }
+  .alphabet-card .hand-diagram {
+    width: 110px;
+    height: 110px;
+  }
+  .alphabet-card .card-status {
+    display: none;
+  }
 }

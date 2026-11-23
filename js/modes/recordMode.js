@@ -9,8 +9,9 @@
  * 30 samples per press. k-NN later compares live hands to these samples.
  */
 
-import { STATIC_LETTERS, LETTER_TIPS } from '../letters.js';
+import { STATIC_LETTERS, LETTER_TIPS, LETTER_MIXUPS } from '../letters.js';
 import { makeSampleId } from '../storage.js';
+import { renderHandDiagram } from '../diagram.js';
 import { byId, renderLetterGrid, setCountdown, makeConfirmButton } from '../ui.js';
 
 /** Seconds of 3-2-1 countdown before recording starts. */
@@ -25,7 +26,7 @@ const CAPTURE_EVERY_MS = 100;
 /**
  * Creates the Record Samples mode.
  * @param {Object} app - Shared app helpers and data (see main.js).
- * @returns {{enter:function, exit:function, onFrame:function}} The mode.
+ * @returns {{enter:function, exit:function, onFrame:function, handleShortcut:function, selectLetter:function}} The mode.
  */
 export function createRecordMode(app) {
   let selectedLetter = STATIC_LETTERS[0];
@@ -50,7 +51,9 @@ export function createRecordMode(app) {
       onPick: pickLetter,
     });
     byId('record-selected').textContent = selectedLetter;
+    renderHandDiagram(byId('record-diagram'), selectedLetter, { flipX: app.settings.flipDiagrams });
     byId('record-tip').textContent = LETTER_TIPS[selectedLetter];
+    byId('record-mixup').textContent = LETTER_MIXUPS[selectedLetter];
     byId('record-count').textContent = (counts[selectedLetter] ?? 0) + ' samples recorded for ' + selectedLetter;
 
     const letterCount = app.recordedLetters().length;
@@ -69,6 +72,17 @@ export function createRecordMode(app) {
     selectedLetter = letter;
     statusText.textContent = '';
     refresh();
+  }
+
+  /**
+   * Moves the selection forward or backward through the alphabet.
+   * @param {number} step - +1 for the next letter, -1 for the previous one.
+   * @returns {void}
+   */
+  function moveLetter(step) {
+    const count = STATIC_LETTERS.length;
+    const index = STATIC_LETTERS.indexOf(selectedLetter);
+    pickLetter(STATIC_LETTERS[(index + step + count) % count]);
   }
 
   /**
@@ -180,6 +194,34 @@ export function createRecordMode(app) {
     /** Called when leaving this screen. @returns {void} */
     exit() {
       cancel();
+    },
+
+    /**
+     * Pre-selects a letter (used by Learn's "Record this letter" button).
+     * @param {string} letter - The letter to record.
+     * @returns {void}
+     */
+    selectLetter(letter) {
+      if (phase === 'idle') {
+        selectedLetter = letter;
+      }
+    },
+
+    /**
+     * Handles a keyboard shortcut (see keyboard.js).
+     * @param {string} action - e.g. "record", "next-letter", or "pick:B".
+     * @returns {void}
+     */
+    handleShortcut(action) {
+      if (action === 'record') {
+        startCountdown();
+      } else if (action === 'next-letter') {
+        moveLetter(1);
+      } else if (action === 'previous-letter') {
+        moveLetter(-1);
+      } else if (action.startsWith('pick:')) {
+        pickLetter(action.slice(5));
+      }
     },
 
     /**
