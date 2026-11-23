@@ -1,0 +1,16 @@
+# macOS / Windows clutter
+.DS_Store
+Thumbs.db
+
+# Node (we have no dependencies, but just in case)
+node_modules/
+
+# Editor folders
+.vscode/
+.idea/
+
+# Exported data files from the app (they can contain your recorded samples)
+asl-coach-data-*.json
+
+# Logs
+*.log
