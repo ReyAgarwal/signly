@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<!--
+  index.html
+  ----------
+  The one and only web page of the ASL Fingerspelling Coach.
+  Every "screen" (Home, Record, Free Sign, Learn, Spell, Progress, Test & Data)
+  is a <section> on this page. JavaScript shows one section at a time,
+  so the app never needs to load another page (and works offline).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ASL Fingerspelling Coach</title>
+  <!-- An empty icon, so the browser doesn't ask the server for favicon.ico (and log a 404). -->
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <button type="button" class="brand" data-screen="home" aria-label="Go to home screen">
+      <span aria-hidden="true">✋</span> ASL Fingerspelling Coach
+    </button>
+    <nav class="nav" aria-label="Modes">
+      <button type="button" data-screen="record">Record</button>
+      <button type="button" data-screen="free">Free Sign</button>
+      <button type="button" data-screen="learn">Learn</button>
+      <button type="button" data-screen="spell">Spell</button>
+      <button type="button" data-screen="progress">Progress</button>
+      <button type="button" data-screen="data">Test &amp; Data</button>
+    </nav>
+  </header>
+
+  <!-- Shown only if the JavaScript never starts (main.js removes it). The most
+       common cause is opening index.html by double-clicking it. -->
+  <p id="load-warning" class="banner error load-warning">
+    The app's code didn't load. Start the server (python3 serve.py) and open
+    http://localhost:8000 in Chrome. Double-clicking index.html will not work.
+  </p>
+
+  <div id="banner" class="banner" role="alert" hidden>
+    <span id="banner-text"></span>
+    <button type="button" id="banner-close" class="banner-close" aria-label="Dismiss message">✕</button>
+  </div>
+
+  <main>
+    <!-- ======================= HOME ======================= -->
+    <section id="screen-home" class="screen" aria-labelledby="home-title">
+      <h1 id="home-title">Learn to fingerspell in ASL</h1>
+      <p class="lead">
+        Hold your hand up to the webcam. The coach recognizes the letter you're signing,
+        tells you which finger to fix, and tracks your progress. Everything runs on this
+        laptop: no internet needed, and no video ever leaves the computer.
+      </p>
+
+      <p id="home-status" class="status-box"></p>
+
+      <div class="tiles">
+        <button type="button" class="tile" data-screen="record">
+          <span class="tile-icon" aria-hidden="true">⏺</span>
+          <span class="tile-title">1. Record Samples</span>
+          <span class="tile-text">Teach the coach what each letter looks like using your own hands.</span>
+        </button>
+        <button type="button" class="tile" data-screen="free">
+          <span class="tile-icon" aria-hidden="true">🔤</span>
+          <span class="tile-title">Free Sign</span>
+          <span class="tile-text">Sign anything and see the letter and confidence live.</span>
+        </button>
+        <button type="button" class="tile" data-screen="learn">
+          <span class="tile-icon" aria-hidden="true">🎯</span>
+          <span class="tile-title">Learn</span>
+          <span class="tile-text">Pick a letter, copy the reference hand, and get finger hints.</span>
+        </button>
+        <button type="button" class="tile" data-screen="spell">
+          <span class="tile-icon" aria-hidden="true">⏱</span>
+          <span class="tile-title">Spell-a-Word</span>
+          <span class="tile-text">Spell words letter by letter before the timer runs out.</span>
+        </button>
+        <button type="button" class="tile" data-screen="progress">
+          <span class="tile-icon" aria-hidden="true">📈</span>
+          <span class="tile-title">Progress</span>
+          <span class="tile-text">See your accuracy for every letter over time.</span>
+        </button>
+        <button type="button" class="tile" data-screen="data">
+          <span class="tile-icon" aria-hidden="true">🧪</span>
+          <span class="tile-title">Test &amp; Data</span>
+          <span class="tile-text">Run the accuracy test, and export or import your data.</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ CAMERA SCREENS (Record, Free Sign, Learn, Spell) ============ -->
+    <section id="screen-camera" class="screen camera-layout" hidden>
+      <div class="camera-column">
+        <div class="camera-frame" id="camera-frame">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+          <div id="camera-status" class="camera-status" role="status"></div>
+          <div id="countdown" class="countdown" hidden></div>
+          <div id="success-burst" class="success-burst" hidden>
+            <span class="success-check" aria-hidden="true">✓</span>
+            <span id="success-text" class="success-text"></span>
+          </div>
+        </div>
+        <button type="button" id="camera-retry" class="button" hidden>Try the camera again</button>
+        <p class="camera-note">The video is mirrored like a selfie. Nothing is recorded or uploaded; only 21 hand points are saved when you record samples.</p>
+      </div>
+
+      <div class="panel-column">
+        <!-- ---------- RECORD ---------- -->
+        <section id="panel-record" class="mode-panel" hidden aria-labelledby="record-title">
+          <h2 id="record-title">Record Samples</h2>
+          <p>Pick a letter, make the sign, then press <strong>Record</strong>. The coach saves
+            one snapshot of your hand every tenth of a second for 3 seconds.</p>
+          <div id="record-letter-grid" class="letter-grid" role="group" aria-label="Choose a letter to record"></div>
+          <div class="selected-letter-row">
+            <span id="record-selected" class="selected-letter">A</span>
+            <div>
+              <p id="record-tip" class="tip"></p>
+              <p id="record-count" class="count-text"></p>
+            </div>
+          </div>
+          <div class="button-row">
+            <button type="button" id="record-start" class="button primary">⏺ Record (3 sec)</button>
+            <button type="button" id="record-delete-letter" class="button danger-outline">Delete this letter's samples</button>
+          </div>
+          <p id="record-status" class="feedback" aria-live="polite"></p>
+          <details class="help">
+            <summary>Tips for good samples</summary>
+            <ul>
+              <li>Record about 30-60 samples per letter. More is better.</li>
+              <li>Move your hand a little while recording: slightly closer, farther, and tilted.</li>
+              <li>Have two or more teammates record, and try both hands.</li>
+              <li>Use good lighting and keep your whole hand inside the video.</li>
+            </ul>
+          </details>
+          <p id="record-total" class="count-text"></p>
+        </section>
+
+        <!-- ---------- FREE SIGN ---------- -->
+        <section id="panel-free" class="mode-panel" hidden aria-labelledby="free-title">
+          <h2 id="free-title">Free Sign</h2>
+          <div class="big-letter-row">
+            <div id="free-letter" class="big-letter" aria-live="polite">?</div>
+            <div class="big-letter-info">
+              <p class="label">Confidence</p>
+              <div class="meter" aria-hidden="true"><div id="free-confidence-bar" class="meter-fill"></div></div>
+              <p id="free-confidence" class="count-text">-</p>
+              <p class="label">Hold steady to type it</p>
+              <div class="meter" aria-hidden="true"><div id="free-hold-bar" class="meter-fill hold"></div></div>
+            </div>
+          </div>
+          <p class="label">Nearest-neighbor votes</p>
+          <div id="free-votes" class="votes"></div>
+          <p class="label">What you've typed</p>
+          <div id="free-text" class="typed-text" aria-live="polite"></div>
+          <div class="button-row">
+            <button type="button" id="free-space" class="button">Space</button>
+            <button type="button" id="free-backspace" class="button">⌫ Backspace</button>
+            <button type="button" id="free-clear" class="button">Clear</button>
+          </div>
+          <p id="free-message" class="feedback"></p>
+        </section>
+
+        <!-- ---------- LEARN ---------- -->
+        <section id="panel-learn" class="mode-panel" hidden aria-labelledby="learn-title">
+          <h2 id="learn-title">Learn</h2>
+          <div id="learn-letter-grid" class="letter-grid small" role="group" aria-label="Choose a letter to learn"></div>
+          <div class="learn-target">
+            <div>
+              <p class="label">Make this letter</p>
+              <div id="learn-letter" class="big-letter target">A</div>
+            </div>
+            <figure class="reference">
+              <canvas id="reference-canvas" width="260" height="260" aria-label="Reference hand skeleton"></canvas>
+              <figcaption id="reference-caption">Reference hand</figcaption>
+            </figure>
+          </div>
+          <p id="learn-tip" class="tip"></p>
+          <p class="label">Hold steady</p>
+          <div class="meter" aria-hidden="true"><div id="learn-hold-bar" class="meter-fill hold"></div></div>
+          <p id="learn-seeing" class="count-text"></p>
+          <p id="learn-hint" class="hint" aria-live="polite"></p>
+          <div class="button-row">
+            <button type="button" id="learn-next" class="button primary">Next letter →</button>
+          </div>
+        </section>
+
+        <!-- ---------- SPELL-A-WORD ---------- -->
+        <section id="panel-spell" class="mode-panel" hidden aria-labelledby="spell-title">
+          <h2 id="spell-title">Spell-a-Word</h2>
+          <div class="scoreboard">
+            <div><p class="label">Time</p><p id="spell-timer" class="score-number">60</p></div>
+            <div><p class="label">Score</p><p id="spell-score" class="score-number">0</p></div>
+            <div><p class="label">Best</p><p id="spell-best" class="score-number">0</p></div>
+          </div>
+          <div id="spell-word" class="spell-word" aria-live="polite"></div>
+          <p id="spell-target-tip" class="tip"></p>
+          <div class="meter" aria-hidden="true"><div id="spell-hold-bar" class="meter-fill hold"></div></div>
+          <p id="spell-feedback" class="feedback" aria-live="polite">Press Start. You have 60 seconds to spell as many words as you can.</p>
+          <div class="button-row">
+            <button type="button" id="spell-start" class="button primary">▶ Start</button>
+            <button type="button" id="spell-skip" class="button" disabled>Skip word</button>
+          </div>
+          <p class="count-text">+10 for each correct letter, +20 bonus for each finished word.</p>
+        </section>
+      </div>
+    </section>
+
+    <!-- ======================= PROGRESS ======================= -->
+    <section id="screen-progress" class="screen" hidden aria-labelledby="progress-title">
+      <h1 id="progress-title">Your Progress</h1>
+      <p>Every letter you lock in during <strong>Learn</strong> or <strong>Spell-a-Word</strong> counts as one attempt.</p>
+      <div id="progress-summary" class="summary-cards"></div>
+      <h2>Accuracy by letter</h2>
+      <div id="progress-letters"></div>
+      <h2>Accuracy by day</h2>
+      <div id="progress-days"></div>
+      <div class="button-row">
+        <button type="button" id="progress-reset" class="button danger-outline">Reset progress</button>
+      </div>
+    </section>
+
+    <!-- ======================= TEST & DATA ======================= -->
+    <section id="screen-data" class="screen" hidden aria-labelledby="data-title">
+      <h1 id="data-title">Test &amp; Data</h1>
+
+      <h2>Accuracy test</h2>
+      <p>
+        The test hides the newest 20% of each letter's samples, then asks the k-NN
+        classifier to recognize them using only the other 80%. It shows the overall
+        accuracy and which letters get mixed up.
+      </p>
+      <div class="button-row">
+        <button type="button" id="accuracy-run" class="button primary">Run accuracy test</button>
+      </div>
+      <div id="accuracy-results" aria-live="polite"></div>
+
+      <h2>Backup and share</h2>
+      <p>
+        Samples are saved in this browser only. Export them to a file for a backup,
+        or to combine samples from several teammates (Import adds to what's already here).
+      </p>
+      <p id="data-summary" class="count-text"></p>
+      <div class="button-row">
+        <button type="button" id="export-button" class="button">⬇ Export data (.json)</button>
+        <label class="button" for="import-file">⬆ Import data (.json)</label>
+        <input type="file" id="import-file" accept=".json,application/json" class="visually-hidden">
+        <button type="button" id="delete-all" class="button danger-outline">Delete ALL samples and progress</button>
+      </div>
+      <p id="data-status" class="feedback" aria-live="polite"></p>
+    </section>
+  </main>
+</body>
+</html>

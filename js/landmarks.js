@@ -49,17 +49,33 @@ export const FINGERS = {
 export const FINGER_NAMES = ['thumb', 'index', 'middle', 'ring', 'pinky'];
 
 /**
- * Pairs of landmark numbers that are connected by a "bone" line when we
- * draw the hand skeleton. The palm lines connect the knuckles together.
+ * The "bones" we draw for the hand skeleton: a line from one landmark to
+ * another, and which finger (or the palm) that line belongs to.
  */
-export const HAND_CONNECTIONS = [
-  [0, 1], [1, 2], [2, 3], [3, 4],
-  [0, 5], [5, 6], [6, 7], [7, 8],
-  [9, 10], [10, 11], [11, 12],
-  [13, 14], [14, 15], [15, 16],
-  [0, 17], [17, 18], [18, 19], [19, 20],
-  [5, 9], [9, 13], [13, 17],
+export const BONES = [
+  { from: 0, to: 1, finger: 'thumb' }, { from: 1, to: 2, finger: 'thumb' },
+  { from: 2, to: 3, finger: 'thumb' }, { from: 3, to: 4, finger: 'thumb' },
+  { from: 5, to: 6, finger: 'index' }, { from: 6, to: 7, finger: 'index' }, { from: 7, to: 8, finger: 'index' },
+  { from: 9, to: 10, finger: 'middle' }, { from: 10, to: 11, finger: 'middle' }, { from: 11, to: 12, finger: 'middle' },
+  { from: 13, to: 14, finger: 'ring' }, { from: 14, to: 15, finger: 'ring' }, { from: 15, to: 16, finger: 'ring' },
+  { from: 17, to: 18, finger: 'pinky' }, { from: 18, to: 19, finger: 'pinky' }, { from: 19, to: 20, finger: 'pinky' },
+  { from: 0, to: 5, finger: 'palm' }, { from: 5, to: 9, finger: 'palm' }, { from: 9, to: 13, finger: 'palm' },
+  { from: 13, to: 17, finger: 'palm' }, { from: 0, to: 17, finger: 'palm' },
 ];
+
+/**
+ * Finds which finger a landmark (joint) belongs to.
+ * @param {number} landmarkIndex - 0 to 20.
+ * @returns {string|null} The finger name, or null for the wrist (landmark 0).
+ */
+export function fingerOfLandmark(landmarkIndex) {
+  for (const fingerName of FINGER_NAMES) {
+    if (FINGERS[fingerName].includes(landmarkIndex)) {
+      return fingerName;
+    }
+  }
+  return null;
+}
 
 /**
  * Converts MediaPipe landmarks ({x, y, z} objects) into simple [x, y, z]
