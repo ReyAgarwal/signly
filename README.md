@@ -21,7 +21,7 @@ signing, tells you which finger to fix, and tracks your progress over time.
 | Screen | What it does |
 |--------|--------------|
 | **Home** | Big buttons for every mode, a status line ("120 samples recorded for 4 letters..."), and a list of keyboard shortcuts |
-| **Alphabet** | A **diagram of every handshape**, with how-to text and a "Watch out" note about the letter it's most often confused with. Click or type a letter to practice it. Can be flipped for left-handed signers, and printed as a study sheet. |
+| **Alphabet** | A **diagram of all 26 letters**, with how-to text and a "Watch out" note about the letter it's most often confused with. **J and Z** are shown with a dashed arrow for their movement and marked "not checked by the coach yet" (the coach looks at one still picture at a time). Includes the finger color key. Click or type a letter to practice it; printable. |
 | **Free Sign** | Sign anything. Shows the recognized letter, the confidence %, the actual k-NN neighbor votes, and types out letters you hold steady. |
 | **Learn** | Pick a target letter. A **diagram** shows how to make it, next to a skeleton of the **average real signer's hand**. Live hints tell you which finger to fix and draw that finger in **red** on the camera *and* the diagram. Hold the right letter for half a second to get a success animation, then it moves to the next letter automatically (or press **Enter**). |
 | **Spell** | Type **any word or sentence** (your name, "Nice to meet you"...) and the coach teaches you to fingerspell it, letter by letter: diagram, tip, live finger hints, and a camera check that moves on when you get each letter right. J and Z (motion letters) get written instructions. |
@@ -30,6 +30,13 @@ signing, tells you which finger to fix, and tracks your progress over time.
 | **Test & Data** | **Fair accuracy test** (hides each person in turn and recognizes their signs using everyone else, shows per-person and per-letter accuracy and which letters get confused), what the coach knows (real signers / teacher-added / learned from you), the **keep learning** switch, **Export/Import**, and dataset credits. |
 | **Add Samples** | *Optional teacher tool.* A fluent signer or ASL teacher can record extra correct examples (about 30 snapshots in 3 seconds). Learners never need it. |
 
+### On every page
+
+- **Right / Left hand switch** (top right): left-handed signers sign with their left hand, which is correct ASL. The switch flips every diagram.
+- **Finger color key** under the camera: an open hand showing which color is which finger (the same colors as the live skeleton; red = the finger to fix).
+- **"Did you know?" fun facts** about ASL, fingerspelling, Deaf culture, and how the coach works.
+- **Practice streak** (days in a row) on Home and Progress, and **"Practice next"** suggestions on Progress. Learn shows how many letters you've mastered, and Free Sign shows a picture of the letter it recognized.
+
 ### Keyboard shortcuts
 
 Your hands are busy signing, so most things work from the keyboard:
@@ -37,7 +44,7 @@ Your hands are busy signing, so most things work from the keyboard:
 | Where | Keys |
 |-------|------|
 | Anywhere | `1`–`8` open a screen (same order as the menu: Alphabet, Learn, Spell, Challenge, Free Sign, Progress, Test & Data, Add Samples) · `Esc` Home |
-| Alphabet | Type a letter to practice it in Learn |
+| Alphabet | Type a letter to practice it in Learn (J and Z open Spell) |
 | Learn | `Enter` or `→` next letter · `←` previous letter · type a letter to jump to it |
 | Spell | `/` type a new phrase · `→` skip a letter · `←` go back a letter |
 | Challenge | `Enter` start / play again · `→` skip word |
@@ -57,7 +64,9 @@ The diagrams were **checked against the real signers**: every diagram's finger
 bends are within the range real people use, thumb positions were fitted to the
 real data (except M, N, T, where the thumb is hidden from the camera and the ASL
 definition was used), and the coach recognizes 20 of the 24 drawings as the right
-letter. A unit test keeps it that way (`tests/diagram-accuracy.test.js`).
+letter. A unit test keeps it that way (`tests/diagram-accuracy.test.js`). P was later
+re-checked against photos of real signers (middle finger straight down, index slanting
+down and forward), after which the coach recognizes 21 of 24 drawings.
 
 ### Where the "answer key" comes from
 
@@ -118,7 +127,7 @@ The unit tests use Node's built-in test runner. **There is nothing to install.**
 node --test          # or: npm test
 ```
 
-There are 91 tests in `tests/`:
+There are 96 tests in `tests/`:
 
 | Test file | What it checks |
 |-----------|----------------|
@@ -128,6 +137,7 @@ There are 91 tests in `tests/`:
 | `smoothing.test.js` | Majority vote, hold-to-lock timing, one lock per hold, reset for double letters |
 | `games-progress-storage.test.js` | Challenge scoring, timer, difficulty levels and word lengths, progress statistics, saving, loading, import/export |
 | `phrase.test.js` | Turning typed text into letters for Spell (uppercase, words, J/Z, skipping punctuation, length limit) |
+| `facts-streak.test.js` | Fun-fact deck (no repeats), practice streak, "practice next" suggestions, J/Z letter data and diagrams |
 | `handModel.test.js` | Diagram hand model: bone lengths, rotations, the thumb really touching the fingertip in F/O/D/W, A/S/T thumbs in different places, back-to-front drawing order |
 | `keyboard-settings.test.js` | Which key does what on each screen, not stealing keys from buttons/text boxes, saving settings |
 | `features-reference-learning.test.js` | Feature vector (tilting the hand doesn't change the shape part), the real-signer data (all 24 letters, several people, valid numbers, credits), the keep-learning safety rules, and the fair leave-one-person-out test |
@@ -155,6 +165,7 @@ js/
   smoothing.js              MAJORITY VOTE + hold-0.5-seconds-to-lock
   games.js                  Challenge rules (word list, difficulty levels, timer, scoring)
   phrase.js                 Turns typed text into letters to fingerspell (for Spell)
+  facts.js                  "Did you know?" fun facts, shown without repeats
   progress.js               Accuracy-per-letter and per-day statistics
   storage.js                localStorage save/load (with try/catch) + JSON export/import
   ui.js                     Page helpers: screens, banners, letter grid, tables, animation

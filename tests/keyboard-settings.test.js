@@ -26,11 +26,11 @@ test('Enter and the right arrow go to the next letter in Learn', () => {
   assert.equal(shortcutFor(press('ArrowLeft'), 'learn'), 'previous-letter');
 });
 
-test('typing a letter picks it (lowercase works too), but not J or Z', () => {
+test('typing a letter picks it (lowercase works too); J and Z only on the Alphabet', () => {
   assert.equal(shortcutFor(press('b'), 'learn'), 'pick:B');
   assert.equal(shortcutFor(press('Y'), 'record'), 'pick:Y');
   assert.equal(shortcutFor(press('j'), 'learn'), null);
-  assert.equal(shortcutFor(press('z'), 'alphabet'), null);
+  assert.equal(shortcutFor(press('z'), 'alphabet'), 'pick:Z');
 });
 
 test('number keys and Esc switch screens from anywhere', () => {

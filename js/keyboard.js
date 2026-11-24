@@ -5,7 +5,7 @@
  * (your hands are busy signing!).
  *
  *   Anywhere:     1-8 = open a screen, Esc = Home
- *   Alphabet:     type a letter = practice that letter in Learn
+ *   Alphabet:     type a letter = practice it in Learn (J and Z open Spell)
  *   Learn:        Enter or → = next letter, ← = previous letter, type a letter = pick it
  *   Spell:        / = type a new phrase, → = skip this letter, ← = go back a letter
  *   Challenge:    Enter = start / play again, → = skip word
@@ -17,7 +17,7 @@
  * file easy to unit test.
  */
 
-import { isStaticLetter } from './letters.js';
+import { isStaticLetter, isMotionLetter } from './letters.js';
 
 /** Number keys open these screens, in the same order as the top menu. */
 export const SCREEN_NUMBER_KEYS = {
@@ -103,6 +103,11 @@ export function shortcutFor(keyEvent, screen) {
 
   const upper = key.length === 1 ? key.toUpperCase() : '';
   if (LETTER_PICK_SCREENS.includes(screen) && isStaticLetter(upper)) {
+    return 'pick:' + upper;
+  }
+  // On the Alphabet, J and Z can be picked too (they open the Spell screen,
+  // which explains their movement).
+  if (screen === 'alphabet' && isMotionLetter(upper)) {
     return 'pick:' + upper;
   }
   return null;

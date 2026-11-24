@@ -28,9 +28,6 @@ const NEXT_LETTER_DELAY_MS = 700;
 /** How long a "that looked like X" message stays before finger hints return. */
 const WRONG_MESSAGE_MS = 1500;
 
-/** Starting handshape to draw for the two motion letters. */
-const MOTION_START_SHAPE = { J: 'I', Z: 'D' };
-
 /**
  * Creates the Spell mode.
  * @param {Object} app - Shared app helpers and data (see main.js).
@@ -84,12 +81,12 @@ export function createSpellMode(app) {
    * @returns {void}
    */
   function showDiagram(highlightFinger) {
-    const step = steps[position];
-    const shape = step.kind === 'motion' ? MOTION_START_SHAPE[step.letter] : step.letter;
-    const key = shape + '|' + highlightFinger + '|' + app.settings.flipDiagrams;
+    // J and Z have their own diagrams, with an arrow showing the movement.
+    const letter = steps[position].letter;
+    const key = letter + '|' + highlightFinger + '|' + app.settings.flipDiagrams;
     if (key !== shownDiagramKey) {
       shownDiagramKey = key;
-      renderHandDiagram(diagram, shape, { flipX: app.settings.flipDiagrams, highlightFinger });
+      renderHandDiagram(diagram, letter, { flipX: app.settings.flipDiagrams, highlightFinger });
     }
   }
 
@@ -132,7 +129,7 @@ export function createSpellMode(app) {
     byId('spell-step').textContent = 'Letter ' + (position + 1) + ' of ' + steps.length;
     shownDiagramKey = '';
     showDiagram(null);
-    diagram.nextElementSibling.textContent = step.kind === 'motion' ? 'Starting handshape' : 'How to make it';
+    diagram.nextElementSibling.textContent = step.kind === 'motion' ? 'Start shape + movement' : 'How to make it';
 
     if (step.kind === 'motion') {
       byId('spell-tip').textContent = MOTION_LETTER_TIPS[step.letter];
@@ -286,6 +283,24 @@ export function createSpellMode(app) {
       renderPhrase();
       if (!finished) {
         renderCurrentLetter();
+      }
+    },
+
+    /**
+     * Starts teaching a phrase (used by the Alphabet for J and Z).
+     * @param {string} text - The phrase, e.g. "J".
+     * @returns {void}
+     */
+    startPhrase(text) {
+      input.value = text;
+      startLesson(text);
+    },
+
+    /** Redraws the diagram (after the Right / Left hand switch changes). @returns {void} */
+    refreshDiagrams() {
+      if (steps.length > 0 && !finished) {
+        shownDiagramKey = '';
+        showDiagram(null);
       }
     },
 

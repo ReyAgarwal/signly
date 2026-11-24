@@ -16,7 +16,7 @@
  */
 
 import { buildHand } from './handModel.js';
-import { LETTER_POSES } from './handPoses.js';
+import { LETTER_POSES, MOTION_POSES, KEY_POSE } from './handPoses.js';
 
 /** Colors: light versions of the skeleton's finger colors, so they're easy to match. */
 export const DIAGRAM_COLORS = {
@@ -31,7 +31,18 @@ export const DIAGRAM_COLORS = {
   nail: '#ffffff',
   highlightFill: '#fca5a5',
   highlightOutline: '#b91c1c',
+  motion: '#4f46e5',
+  label: '#1f2937',
 };
+
+/** Finger names for the color key, in landmark order (thumb tip = 4, index tip = 8, ...). */
+const KEY_LABELS = [
+  { finger: 'thumb', name: 'Thumb', tip: 4, side: 'outside' },
+  { finger: 'index', name: 'Index', tip: 8, distance: 1.1 },
+  { finger: 'middle', name: 'Middle', tip: 12, distance: 2.6 },
+  { finger: 'ring', name: 'Ring', tip: 16, distance: 1.1 },
+  { finger: 'pinky', name: 'Pinky', tip: 20, side: 'outside' },
+];
 
 /** How thick each bone is drawn (thumb bones first; the thumb's first bone is the fleshy base). */
 const BONE_WIDTHS = {
@@ -134,7 +145,9 @@ function makeNail(start, end, realLength, width, nailFacing, depth) {
 /**
  * Turns a posed 3D hand into a list of flat shapes, sorted back-to-front.
  * @param {Object} hand - From buildHand() in handModel.js.
- * @param {{flipX?:boolean, highlightFinger?:string|null, thumbLayer?:string, showForearm?:boolean}} options
+ * @param {{flipX?:boolean, highlightFinger?:string|null, thumbLayer?:string, showForearm?:boolean,
+ *   motion?:Object}} options
+ *   motion = for J and Z: the movement path to draw as a dashed arrow (see handPoses.js).
  * @returns {{shapes:Array<Object>, viewBox:number[]}} Shapes to draw and the picture frame.
  */
 export function buildDiagramShapes(hand, options = {}) {
@@ -183,7 +196,32 @@ export function buildDiagramShapes(hand, options = {}) {
 
   // Painter's algorithm: draw the farthest shapes first.
   shapes.sort((first, second) => first.depth - second.depth);
-  return { shapes, viewBox: computeViewBox(points.map((p) => project(p, flipX))) };
+
+  const framePoints = points.map((p) => project(p, flipX));
+  if (options.motion) {
+    // The movement arrow goes on top of everything (so it's added last).
+    const motionShape = makeMotionShape(points, options.motion, flipX);
+    shapes.push(motionShape);
+    framePoints.push(...motionShape.points);
+  }
+  return { shapes, viewBox: computeViewBox(framePoints) };
+}
+
+/**
+ * Works out where the J or Z movement arrow goes in the picture.
+ * @param {number[][]} points - The hand's 3D points.
+ * @param {{from:number, offset:number[], path:number[][]}} motion - From handPoses.js.
+ * @param {boolean} flipX - True if the picture is mirrored.
+ * @returns {{type:string, points:number[][], depth:number}} The arrow shape.
+ */
+function makeMotionShape(points, motion, flipX) {
+  const start = project(points[motion.from], flipX);
+  const sign = flipX ? -1 : 1;
+  const arrowPoints = [];
+  for (const [dx, dy] of motion.path) {
+    arrowPoints.push([start[0] + (motion.offset[0] + dx) * sign, start[1] + motion.offset[1] + dy]);
+  }
+  return { type: 'motion', points: arrowPoints, curve: motion.path.length === 4 && motion.from === 20, depth: Infinity };
 }
 
 /**
@@ -191,7 +229,7 @@ export function buildDiagramShapes(hand, options = {}) {
  * @param {number[][]} flatPoints - 2D points of the hand.
  * @returns {number[]} [left, top, width, height] for the SVG viewBox.
  */
-function computeViewBox(flatPoints) {
+function computeViewBox(flatPoints, minSize = MIN_VIEW_SIZE) {
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
@@ -203,7 +241,7 @@ function computeViewBox(flatPoints) {
     maxY = Math.max(maxY, y);
   }
   const margin = 1.1;
-  const size = Math.max(MIN_VIEW_SIZE, maxX - minX + 2 * margin, maxY - minY + 2 * margin);
+  const size = Math.max(minSize, maxX - minX + 2 * margin, maxY - minY + 2 * margin);
   const centerX = (minX + maxX) / 2;
   const centerY = (minY + maxY) / 2;
   return [centerX - size / 2, centerY - size / 2, size, size];
@@ -284,6 +322,65 @@ function drawNail(svg, shape) {
 }
 
 /**
+ * Draws the J / Z movement as a dashed line with an arrowhead.
+ * @param {SVGElement} svg - Where to draw.
+ * @param {Object} shape - A 'motion' shape.
+ * @returns {void}
+ */
+function drawMotion(svg, shape) {
+  const [p0, p1, p2, p3] = shape.points;
+  const text = (p) => p[0].toFixed(3) + ' ' + p[1].toFixed(3);
+  // J is a smooth curve (a "Bezier curve" through control points); Z is straight lines.
+  let pathData = 'M ' + text(p0) + ' L ' + text(p1) + ' L ' + text(p2) + ' L ' + text(p3);
+  if (shape.curve) {
+    pathData = 'M ' + text(p0) + ' C ' + text(p1) + ' ' + text(p2) + ' ' + text(p3);
+  }
+  svg.append(svgElement('path', {
+    d: pathData, fill: 'none', stroke: DIAGRAM_COLORS.motion, 'stroke-width': 0.22,
+    'stroke-dasharray': '0.5 0.35', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+  }));
+
+  // Arrowhead: a small triangle pointing along the last part of the path.
+  const angle = Math.atan2(p3[1] - p2[1], p3[0] - p2[0]);
+  const size = 0.7;
+  const left = [p3[0] - size * Math.cos(angle - 0.5), p3[1] - size * Math.sin(angle - 0.5)];
+  const right = [p3[0] - size * Math.cos(angle + 0.5), p3[1] - size * Math.sin(angle + 0.5)];
+  svg.append(svgElement('polygon', {
+    points: [p3, left, right].map((p) => p[0].toFixed(3) + ',' + p[1].toFixed(3)).join(' '),
+    fill: DIAGRAM_COLORS.motion,
+  }));
+}
+
+/**
+ * Draws a list of shapes (palm, bones, nails, motion arrow) into an <svg>.
+ * @param {SVGElement} svg - Where to draw.
+ * @param {Array<Object>} shapes - From buildDiagramShapes().
+ * @returns {void}
+ */
+function drawShapes(svg, shapes) {
+  for (const shape of shapes) {
+    if (shape.type === 'palm') {
+      drawPalm(svg, shape);
+    } else if (shape.type === 'nail') {
+      drawNail(svg, shape);
+    } else if (shape.type === 'motion') {
+      drawMotion(svg, shape);
+    } else {
+      drawBone(svg, shape);
+    }
+  }
+}
+
+/**
+ * Finds the recipe for a letter: one of the 24 still letters, or J / Z.
+ * @param {string} letter - The letter.
+ * @returns {Object|undefined} The recipe from handPoses.js.
+ */
+function poseFor(letter) {
+  return LETTER_POSES[letter] ?? MOTION_POSES[letter];
+}
+
+/**
  * Draws (or redraws) the diagram for a letter into an existing <svg>.
  * @param {SVGElement} svg - The SVG element to fill.
  * @param {string} letter - The letter, e.g. "B".
@@ -294,7 +391,7 @@ function drawNail(svg, shape) {
  */
 export function renderHandDiagram(svg, letter, options = {}) {
   svg.replaceChildren();
-  const pose = LETTER_POSES[letter];
+  const pose = poseFor(letter);
   if (!pose) {
     return;
   }
@@ -303,20 +400,84 @@ export function renderHandDiagram(svg, letter, options = {}) {
     ...options,
     thumbLayer: pose.thumb.layer,
     showForearm: pose.forearm !== false,
+    motion: pose.motion,
   });
   svg.setAttribute('viewBox', viewBox.map((n) => n.toFixed(3)).join(' '));
   svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', 'Diagram of the handshape for the letter ' + letter);
-
-  for (const shape of shapes) {
-    if (shape.type === 'palm') {
-      drawPalm(svg, shape);
-    } else if (shape.type === 'nail') {
-      drawNail(svg, shape);
-    } else {
-      drawBone(svg, shape);
-    }
+  let label = 'Diagram of the handshape for the letter ' + letter;
+  if (pose.motion) {
+    label += ', with an arrow showing the movement';
   }
+  svg.setAttribute('aria-label', label);
+  drawShapes(svg, shapes);
+}
+
+/**
+ * Draws the finger color key: an open hand with each finger in its color
+ * and labeled with its name, so users can match colors to fingers.
+ * @param {SVGElement} svg - The SVG element to fill.
+ * @param {{flipX?:boolean}} options - flipX = mirror for left-handed signers.
+ * @returns {void}
+ */
+export function renderFingerKey(svg, options = {}) {
+  svg.replaceChildren();
+  const flipX = options.flipX ?? false;
+  const hand = buildHand(KEY_POSE);
+  const { shapes } = buildDiagramShapes(hand, { flipX, showForearm: false });
+
+  // Index, middle, and ring names go just past their fingertips (middle a bit
+  // farther, so neighbors don't bump into each other). Thumb and pinky names go
+  // out to the side of their fingertips.
+  const labels = [];
+  const handCenterX = project(hand.landmarks[9], flipX)[0];
+  for (const { finger, name, tip, distance, side } of KEY_LABELS) {
+    const tipPoint = project(hand.landmarks[tip], flipX);
+    if (side === 'outside') {
+      const goesRight = tipPoint[0] > handCenterX;
+      labels.push({ finger, name, anchor: goesRight ? 'start' : 'end', at: [tipPoint[0] + (goesRight ? 0.7 : -0.7), tipPoint[1] + 0.2] });
+      continue;
+    }
+    const before = project(hand.landmarks[tip - 1], flipX);
+    const dx = tipPoint[0] - before[0];
+    const dy = tipPoint[1] - before[1];
+    const length = Math.hypot(dx, dy) || 1;
+    labels.push({ finger, name, anchor: 'middle', at: [tipPoint[0] + (dx / length) * distance, tipPoint[1] + (dy / length) * distance] });
+  }
+
+  const framePoints = [...hand.landmarks.map((p) => project(p, flipX)), ...labels.map((l) => l.at)];
+  const viewBox = computeViewBox(framePoints, 0);
+  // Leave a little extra room on the sides for the words.
+  // Leave room for the words beside the thumb and pinky.
+  viewBox[0] -= 3.6;
+  viewBox[1] -= 0.6;
+  viewBox[2] += 7.2;
+  viewBox[3] += 1.2;
+  svg.setAttribute('viewBox', viewBox.map((n) => n.toFixed(3)).join(' '));
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', 'Finger color key: thumb yellow, index green, middle blue, ring purple, pinky teal');
+  drawShapes(svg, shapes);
+
+  for (const label of labels) {
+    const text = svgElement('text', {
+      x: label.at[0], y: label.at[1], 'text-anchor': label.anchor, 'dominant-baseline': 'middle',
+      'font-size': 1.25, 'font-weight': 800, fill: DIAGRAM_COLORS.label,
+      stroke: DIAGRAM_COLORS[label.finger], 'stroke-width': 0.35, 'paint-order': 'stroke',
+    });
+    text.textContent = label.name;
+    svg.append(text);
+  }
+}
+
+/**
+ * Creates a brand-new SVG finger color key.
+ * @param {{flipX?:boolean, className?:string}} options
+ * @returns {SVGElement} The finished key.
+ */
+export function createFingerKey(options = {}) {
+  const svg = document.createElementNS(SVG_NAMESPACE, 'svg');
+  svg.setAttribute('class', options.className ?? 'finger-key');
+  renderFingerKey(svg, options);
+  return svg;
 }
 
 /**

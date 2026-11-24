@@ -11,7 +11,7 @@
  * so text from an imported file can never be run as code.
  */
 
-import { STATIC_LETTERS, LETTER_TIPS, LETTER_MIXUPS } from './letters.js';
+import { STATIC_LETTERS, ALPHABET, LETTER_TIPS, LETTER_MIXUPS, isMotionLetter } from './letters.js';
 import { statsByLetter, statsByDay, letterHistory, overallStats } from './progress.js';
 import { createHandDiagram } from './diagram.js';
 
@@ -195,15 +195,24 @@ export function renderLetterGrid(container, options) {
  * @param {HTMLElement} container - The hero art area.
  * @returns {void}
  */
-export function renderHeroArt(container) {
-  if (container.childElementCount > 0) {
-    return;
-  }
+export function renderHeroArt(container, flipX = false) {
+  container.replaceChildren();
   for (const letter of ['A', 'S', 'L']) {
     const card = makeElement('div', 'hero-card');
-    card.append(createHandDiagram(letter), makeElement('span', '', letter));
+    card.append(createHandDiagram(letter, { flipX }), makeElement('span', '', letter));
     container.append(card);
   }
+}
+
+/**
+ * Puts a fun fact into a "Did you know?" card.
+ * @param {HTMLElement} slot - The card (an element with data-fact-slot).
+ * @param {{topic:string, text:string}} fact - The fact to show.
+ * @returns {void}
+ */
+export function showFact(slot, fact) {
+  slot.querySelector('.fact-topic').textContent = 'Did you know? · ' + fact.topic;
+  slot.querySelector('.fact-text').textContent = fact.text;
 }
 
 /**
@@ -216,16 +225,21 @@ export function renderHeroArt(container) {
  */
 export function renderAlphabetChart(container, options) {
   container.replaceChildren();
-  for (const letter of STATIC_LETTERS) {
-    const card = makeElement('button', 'alphabet-card');
+  for (const letter of ALPHABET) {
+    const moves = isMotionLetter(letter);
+    const card = makeElement('button', moves ? 'alphabet-card motion' : 'alphabet-card');
     card.type = 'button';
-    card.setAttribute('aria-label', 'Practice the letter ' + letter);
+    card.setAttribute('aria-label', moves ? 'How to sign ' + letter + ' (a motion letter)' : 'Practice the letter ' + letter);
 
     const top = makeElement('div', 'card-top');
     top.append(makeElement('span', 'card-letter', letter));
     top.append(createHandDiagram(letter, { flipX: options.flipX }));
     card.append(top);
 
+    // J and Z move, so the coach can't check them yet: say so on the card.
+    if (moves) {
+      card.append(makeElement('span', 'motion-badge', '↻ Moves · not checked by the coach yet'));
+    }
     card.append(makeElement('span', 'card-tip', LETTER_TIPS[letter]));
     card.append(makeElement('span', 'mixup', LETTER_MIXUPS[letter]));
 
@@ -399,15 +413,45 @@ function makeSummaryCard(label, value) {
 }
 
 /**
+ * Shows the "practice next" letters as buttons.
+ * @param {string[]} letters - Suggested letters (weakest first).
+ * @param {Object<string, {accuracy:number}>} byLetter - Stats from statsByLetter().
+ * @param {function(string):void} onPick - Called with a letter when clicked.
+ * @returns {void}
+ */
+function renderPracticeNext(letters, byLetter, onPick) {
+  const container = byId('practice-next');
+  container.replaceChildren();
+  if (letters.length === 0) {
+    container.append(makeElement('p', 'count-text', 'Great job: every letter you\'ve tried is at 80% or better!'));
+    return;
+  }
+  for (const letter of letters) {
+    const button = makeElement('button', 'practice-letter', letter);
+    button.type = 'button';
+    const stats = byLetter[letter];
+    button.append(makeElement('small', '', stats ? formatPercent(stats.accuracy) : 'new'));
+    button.addEventListener('click', () => onPick(letter));
+    container.append(button);
+  }
+}
+
+/**
  * Fills in the Progress screen.
  * @param {Array<Object>} attempts - Saved attempts.
  * @param {{easy:number, medium:number, hard:number}} bestScores - Best Challenge score per difficulty.
+ * @param {{streak:number, practiceNext:string[], onPractice:function(string):void}} extras
+ *   streak = days in a row, practiceNext = suggested letters, onPractice = opens a letter in Learn.
  * @returns {void}
  */
-export function renderProgress(attempts, bestScores) {
+export function renderProgress(attempts, bestScores, extras) {
   const overall = overallStats(attempts);
   const summary = byId('progress-summary');
+  const streakCard = makeSummaryCard('Day streak 🔥', String(extras.streak));
+  streakCard.classList.add('streak');
+  renderPracticeNext(extras.practiceNext, statsByLetter(attempts), extras.onPractice);
   summary.replaceChildren(
+    streakCard,
     makeSummaryCard('Attempts', String(overall.total)),
     makeSummaryCard('Overall accuracy', overall.total > 0 ? formatPercent(overall.accuracy) : '-'),
     makeSummaryCard('Letters practiced', overall.lettersPracticed + ' / 24'),

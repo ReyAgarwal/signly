@@ -161,3 +161,51 @@ export function overallStats(attempts) {
     lettersPracticed: letters.size,
   };
 }
+
+/** One day in milliseconds (24 hours x 60 minutes x 60 seconds x 1000). */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Counts how many days in a row the user has practiced (with at least one
+ * correct sign). If they haven't practiced yet today, the streak is still
+ * alive from yesterday, so we start counting from yesterday.
+ * @param {Array<{correct:boolean, time:number}>} attempts - All attempts.
+ * @param {number} nowMs - The current time.
+ * @returns {number} Days in a row (0 if no streak).
+ */
+export function practiceStreak(attempts, nowMs) {
+  const goodDays = new Set();
+  for (const attempt of attempts) {
+    if (attempt.correct) {
+      goodDays.add(dayKey(attempt.time));
+    }
+  }
+
+  let day = nowMs;
+  if (!goodDays.has(dayKey(day))) {
+    day -= DAY_MS;
+  }
+  let streak = 0;
+  while (goodDays.has(dayKey(day))) {
+    streak += 1;
+    day -= DAY_MS;
+  }
+  return streak;
+}
+
+/**
+ * Suggests which letters to practice next: tried letters below 80%
+ * accuracy (lowest first), then letters never practiced.
+ * @param {Array<{letter:string, correct:boolean}>} attempts - All attempts.
+ * @param {string[]} letters - Letters that can be practiced, in alphabet order.
+ * @param {number} count - How many suggestions to return.
+ * @returns {string[]} Letters to practice.
+ */
+export function lettersToPractice(attempts, letters, count = 5) {
+  const stats = statsByLetter(attempts);
+  const struggling = letters
+    .filter((letter) => stats[letter] && stats[letter].accuracy < 0.8)
+    .sort((first, second) => stats[first].accuracy - stats[second].accuracy);
+  const neverTried = letters.filter((letter) => !stats[letter]);
+  return [...struggling, ...neverTried].slice(0, count);
+}

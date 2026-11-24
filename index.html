@@ -42,6 +42,8 @@
     <symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/></symbol>
     <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 5l10 7-10 7zM19 5v14"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1V17h5v-1.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3z"/></symbol>
+    <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 21c-3.9 0-7-2.8-7-6.6 0-3.1 2.1-5.2 3.6-6.9.4 1.6 1.3 2.7 2.4 3.3C11 7.5 12.6 4.6 15 3c-.2 2.6.8 4.4 2.2 6 1.1 1.3 1.8 3 1.8 4.8C19 18 15.9 21 12 21z"/></symbol>
     <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7 14h10"/></symbol>
   </svg>
 
@@ -62,6 +64,12 @@
         <button type="button" data-screen="data" title="Keyboard shortcut: 7"><svg class="icon" aria-hidden="true"><use href="#i-flask"></use></svg><span>Test &amp; Data</span></button>
         <button type="button" data-screen="record" title="Keyboard shortcut: 8"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg><span>Add Samples</span></button>
       </nav>
+      <div class="hand-switch" role="radiogroup" aria-label="Which hand do you sign with?"
+           title="Sign with your dominant hand. Left-handed signers use their left hand, and that's correct ASL. This flips every picture.">
+        <svg class="icon" aria-hidden="true"><use href="#i-hand"></use></svg>
+        <button type="button" role="radio" data-hand="right" aria-checked="true">Right</button>
+        <button type="button" role="radio" data-hand="left" aria-checked="false">Left</button>
+      </div>
     </div>
   </header>
 
@@ -113,6 +121,14 @@
             <div><h3>Get instant feedback</h3><p>The coach compares you with ~6,000 real signers and turns the finger you need to fix red.</p></div>
           </li>
         </ol>
+      </section>
+
+      <section class="home-section" aria-label="Fun fact">
+      <aside class="fact-card" data-fact-slot>
+        <span class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-bulb"></use></svg></span>
+        <div class="fact-body"><p class="fact-topic">Did you know?</p><p class="fact-text"></p></div>
+        <button type="button" class="fact-next">Another fact <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+      </aside>
       </section>
 
       <section class="home-section" aria-labelledby="modes-title">
@@ -167,7 +183,7 @@
           <thead><tr><th scope="col">Where</th><th scope="col">Keys</th></tr></thead>
           <tbody>
             <tr><td>Anywhere</td><td><kbd>1</kbd>–<kbd>8</kbd> open a screen (same order as the menu) · <kbd>Esc</kbd> Home</td></tr>
-            <tr><td>Alphabet</td><td>Type a letter to practice it in Learn</td></tr>
+            <tr><td>Alphabet</td><td>Type a letter to practice it in Learn (J and Z open Spell)</td></tr>
             <tr><td>Learn</td><td><kbd>Enter</kbd> or <kbd>→</kbd> next letter · <kbd>←</kbd> previous letter · type a letter to jump to it</td></tr>
             <tr><td>Spell</td><td><kbd>/</kbd> type a new phrase · <kbd>→</kbd> skip a letter · <kbd>←</kbd> go back a letter</td></tr>
             <tr><td>Challenge</td><td><kbd>Enter</kbd> start / play again · <kbd>→</kbd> skip word</td></tr>
@@ -191,17 +207,24 @@
           <button type="button" id="alphabet-print" class="button"><svg class="icon" aria-hidden="true"><use href="#i-print"></use></svg> Print chart</button>
         </div>
       </div>
-      <div class="toolbar card no-print">
-        <div class="legend" aria-label="Finger colors">
-          <span><i class="swatch thumb"></i>Thumb</span>
-          <span><i class="swatch index"></i>Index</span>
-          <span><i class="swatch middle"></i>Middle</span>
-          <span><i class="swatch ring"></i>Ring</span>
-          <span><i class="swatch pinky"></i>Pinky</span>
+      <div class="alphabet-intro">
+        <div class="card key-card">
+          <svg id="alphabet-key" class="finger-key"></svg>
+          <div>
+            <p class="key-title">Finger color key</p>
+            <p class="count-text">Each finger has the same color in every picture and on the live camera skeleton. A red finger is the one to fix.</p>
+            <p class="count-text">Left-handed? Use the <strong>Right / Left</strong> switch at the top to flip every picture.</p>
+          </div>
         </div>
-        <label class="toggle"><input type="checkbox" id="alphabet-flip"> I sign with my left hand (flip the pictures)</label>
+        <aside class="fact-card" data-fact-slot>
+        <span class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-bulb"></use></svg></span>
+        <div class="fact-body"><p class="fact-topic">Did you know?</p><p class="fact-text"></p></div>
+        <button type="button" class="fact-next">Another fact <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+      </aside>
       </div>
-      <p class="note">J and Z aren't shown because they're signed with a movement. The Spell screen explains how to make them.</p>
+      <p class="note"><strong>J and Z</strong> are shown with a dashed arrow because they're signed with a movement.
+        The coach checks one still picture at a time, so it can't check them yet. They're excluded from
+        Learn and Challenge for now, but Spell explains how to make them.</p>
       <div id="alphabet-grid" class="alphabet-grid"></div>
     </section>
 
@@ -229,6 +252,18 @@
           </div>
           <button type="button" id="camera-retry" class="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg> Try the camera again</button>
           <p class="camera-note"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg> Everything stays on this laptop. Only 21 hand points are ever saved, never video.</p>
+          <div class="card key-card compact">
+            <svg id="camera-key" class="finger-key"></svg>
+            <div>
+              <p class="key-title">Finger color key</p>
+              <p class="count-text">The skeleton on the video uses these colors. A <strong class="text-bad">red</strong> finger is the one to fix.</p>
+            </div>
+          </div>
+          <aside class="fact-card" data-fact-slot>
+        <span class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-bulb"></use></svg></span>
+        <div class="fact-body"><p class="fact-topic">Did you know?</p><p class="fact-text"></p></div>
+        <button type="button" class="fact-next">Another fact <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+      </aside>
         </div>
 
         <div class="panel-column">
@@ -267,11 +302,15 @@
               </div>
             </div>
             <div class="card">
-              <p class="label">Pick any letter</p>
+              <div class="mastery">
+                <p class="label">Letters you've signed correctly</p>
+                <p id="learn-mastery" class="mastery-count"></p>
+              </div>
+              <div class="meter" aria-hidden="true"><div id="learn-mastery-bar" class="meter-fill hold"></div></div>
+              <p class="label spaced">Pick any letter</p>
               <div id="learn-letter-grid" class="letter-grid small" role="group" aria-label="Choose a letter to learn"></div>
               <div class="toggle-row">
                 <label class="toggle"><input type="checkbox" id="learn-auto-advance"> Go to the next letter automatically after a correct sign</label>
-                <label class="toggle"><input type="checkbox" id="learn-flip"> I sign with my left hand (flip the picture)</label>
               </div>
               <p class="keyboard-hint"><strong>Keys:</strong> <kbd>Enter</kbd>/<kbd>→</kbd> next letter · <kbd>←</kbd> previous · type a letter to jump to it</p>
             </div>
@@ -369,6 +408,10 @@
             <div class="card">
               <div class="big-letter-row">
                 <div id="free-letter" class="big-letter" aria-live="polite">?</div>
+                <figure class="diagram-figure">
+                  <svg id="free-diagram" class="hand-diagram small"></svg>
+                  <figcaption>Should look like</figcaption>
+                </figure>
                 <div class="big-letter-info">
                   <p class="label">Confidence</p>
                   <div class="meter" aria-hidden="true"><div id="free-confidence-bar" class="meter-fill"></div></div>
@@ -443,6 +486,16 @@
         </div>
       </div>
       <div id="progress-summary" class="summary-cards"></div>
+      <div class="card">
+        <h2 class="card-title">Practice next</h2>
+        <p class="count-text">Your weakest letters first, then letters you haven't tried. Click one to practice it.</p>
+        <div id="practice-next" class="practice-next"></div>
+      </div>
+      <aside class="fact-card" data-fact-slot>
+        <span class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-bulb"></use></svg></span>
+        <div class="fact-body"><p class="fact-topic">Did you know?</p><p class="fact-text"></p></div>
+        <button type="button" class="fact-next">Another fact <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+      </aside>
       <div class="card">
         <h2 class="card-title">Accuracy by letter</h2>
         <div id="progress-letters"></div>
@@ -522,6 +575,11 @@
             original + keypoints + evaluation)</em> (Version 1). Mendeley Data. doi:10.17632/97yd3b5f5h.1</li>
         </ul>
       </div>
+      <aside class="fact-card" data-fact-slot>
+        <span class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-bulb"></use></svg></span>
+        <div class="fact-body"><p class="fact-topic">Did you know?</p><p class="fact-text"></p></div>
+        <button type="button" class="fact-next">Another fact <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+      </aside>
     </section>
   </main>
 

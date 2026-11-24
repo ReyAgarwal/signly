@@ -50,7 +50,6 @@ export function createLearnMode(app) {
   const referenceCanvas = byId('reference-canvas');
   const diagram = byId('learn-diagram');
   const autoAdvanceBox = byId('learn-auto-advance');
-  const flipBox = byId('learn-flip');
 
   /**
    * Draws the diagram, but only if something changed (redrawing every frame is wasteful).
@@ -72,13 +71,17 @@ export function createLearnMode(app) {
    * @returns {void}
    */
   function showLetterGrid() {
+    const mastered = app.masteredLetters();
     renderLetterGrid(byId('learn-letter-grid'), {
       counts: app.sampleCounts(),
       selected: targetLetter,
       onPick: setTarget,
       showCounts: false,
-      mastered: app.masteredLetters(),
+      mastered: mastered,
     });
+    // Mastery: how many of the 24 letters have been signed correctly at least once.
+    byId('learn-mastery').textContent = mastered.size + ' / ' + STATIC_LETTERS.length;
+    setMeter(byId('learn-mastery-bar'), mastered.size / STATIC_LETTERS.length);
   }
 
   /**
@@ -184,16 +187,11 @@ export function createLearnMode(app) {
   byId('learn-previous').addEventListener('click', () => moveLetter(-1));
   byId('learn-record-this').addEventListener('click', () => app.openRecord(targetLetter));
   autoAdvanceBox.addEventListener('change', () => app.setSetting('autoAdvance', autoAdvanceBox.checked));
-  flipBox.addEventListener('change', () => {
-    app.setSetting('flipDiagrams', flipBox.checked);
-    showDiagram(null);
-  });
 
   return {
     /** Called when this screen opens. @returns {void} */
     enter() {
       autoAdvanceBox.checked = app.settings.autoAdvance;
-      flipBox.checked = app.settings.flipDiagrams;
       shownDiagramKey = '';
       setTarget(targetLetter);
     },
@@ -202,6 +200,12 @@ export function createLearnMode(app) {
     exit() {
       clearTimeout(autoAdvanceTimer);
       smoother.reset();
+    },
+
+    /** Redraws the diagram (after the Right / Left hand switch changes). @returns {void} */
+    refreshDiagrams() {
+      shownDiagramKey = '';
+      showDiagram(null);
     },
 
     /**

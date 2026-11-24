@@ -18,6 +18,8 @@
  *       (or a list of 3, one per thumb bone, e.g. tucked under but the tip in front)
  *   view = rotations of the whole hand, e.g. [['y', -70]] turns the palm to the side
  *   forearm = false hides the arm (for letters where the bent wrist would make it confusing)
+ *   motion = for J and Z: the path the fingertip draws, as [x, y] steps in picture units,
+ *            starting from landmark `from` (shown as a dashed arrow)
  *
  * All recipes are for a RIGHT hand as you see it in the mirror (the webcam view).
  */
@@ -167,11 +169,13 @@ export const LETTER_POSES = {
     thumb: { base: [-0.1, 0.6, 1], touch: { finger: 'index', at: 3 } },
   },
   P: {
-    // The K handshape tipped forward: index points toward you, middle finger points down.
-    // Drawn from the side (turned like C) so both fingers are easy to see.
-    view: [['x', 80], ['y', -55]],
+    // Like K, but the hand points DOWN: the middle finger points straight down,
+    // the index slants down and toward you, and the thumb sits between them.
+    // (Checked against photos of real signers.) Drawn from the side so both
+    // fingers are easy to see.
+    view: [['x', 75], ['y', -62]],
     forearm: false,
-    fingers: { index: straight(-8), middle: bent(14, 95, 25, 10), ring: curled(3), pinky: curled(6) },
+    fingers: { index: bent(-6, 40, 5, 5), middle: bent(12, 95, 10, 0), ring: curled(3), pinky: curled(6) },
     thumb: { base: [0, 0.6, 1], touch: { finger: 'middle', at: 0.6 }, layer: 'front' },
   },
   Q: {
@@ -226,4 +230,31 @@ export const LETTER_POSES = {
     fingers: { index: curled(-3), middle: curled(0), ring: curled(3), pinky: straight(20) },
     thumb: { base: [-1, 0.6, 0.25], middle: [-1, 0.25, 0], tip: [-1, 0.15, 0] },
   },
+};
+
+/**
+ * J and Z: the coach can't check them (they move), but the diagrams show the
+ * starting handshape plus a dashed arrow for the movement. Arrow points are
+ * in picture units (y goes DOWN), starting at the fingertip that draws.
+ */
+export const MOTION_POSES = {
+  J: {
+    // Starts as I; the pinky draws a J: down, then curving toward the thumb side.
+    ...LETTER_POSES.I,
+    motion: { from: 20, offset: [1.4, 0.2], path: [[0, 0], [0.1, 3.2], [-0.5, 4.2], [-1.5, 3.5]] },
+  },
+  Z: {
+    // The index finger points (like the number 1) and draws a Z in the air.
+    view: FACING_YOU,
+    fingers: { index: straight(-3), middle: curled(0), ring: curled(3), pinky: curled(6) },
+    thumb: { base: [-0.3, 0.75, 0.8], reach: [-0.35, 3.35, 1.7], layer: 'front' },
+    motion: { from: 8, offset: [0.9, -0.4], path: [[0, 0], [2.4, 0], [0, 2.2], [2.4, 2.2]] },
+  },
+};
+
+/** An open hand with spread fingers, used for the "which color is which finger" key. */
+export const KEY_POSE = {
+  view: [['y', -5]],
+  fingers: { index: straight(-17), middle: straight(-3), ring: straight(12), pinky: straight(27) },
+  thumb: { base: [-1, 0.5, 0.3], middle: [-1, 0.6, 0.1], tip: [-0.75, 0.75, 0] },
 };

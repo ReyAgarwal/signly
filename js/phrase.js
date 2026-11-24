@@ -13,16 +13,13 @@
  * Pure logic (no web page code), so it can be unit tested.
  */
 
-import { isStaticLetter } from './letters.js';
+import { isStaticLetter, LETTER_TIPS } from './letters.js';
 
 /** Longest phrase we accept (about one sentence). */
 export const MAX_PHRASE_LENGTH = 60;
 
-/** How to sign the two letters that need movement. */
-export const MOTION_LETTER_TIPS = {
-  J: 'Make the I handshape (pinky up), then draw a J in the air with your pinky: down, then curve toward you.',
-  Z: 'Point your index finger (other fingers curled), then draw a Z in the air: across, diagonal down, across.',
-};
+/** How to sign the two letters that need movement (from letters.js). */
+export const MOTION_LETTER_TIPS = { J: LETTER_TIPS.J, Z: LETTER_TIPS.Z };
 
 /**
  * Splits typed text into fingerspelling steps.

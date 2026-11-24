@@ -264,6 +264,11 @@ export function createChallengeMode(app) {
       }
     },
 
+    /** Redraws the picture hint (after the Right / Left hand switch changes). @returns {void} */
+    refreshDiagrams() {
+      showPictureHint(game ? currentTargetLetter(game) : null);
+    },
+
     /** Called when leaving this screen: the game ends. @returns {void} */
     exit() {
       endGame();

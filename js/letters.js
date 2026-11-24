@@ -4,9 +4,10 @@
  * The list of ASL letters this app practices, plus a short written
  * description of each handshape.
  *
- * We only use the 24 "static" letters (the ones you hold still).
- * J and Z are skipped for now because they are signed with a MOVEMENT,
- * and our recognizer only looks at one frame (one picture) at a time.
+ * The coach checks the 24 "static" letters (the ones you hold still).
+ * J and Z are signed with a MOVEMENT, and our recognizer only looks at one
+ * frame (one picture) at a time, so it can't check them yet. They still
+ * have tips and diagrams (with an arrow showing the movement) for learning.
  *
  * The descriptions are our own words, so we don't need any copyrighted
  * pictures of hands.
@@ -17,6 +18,12 @@ export const STATIC_LETTERS = [
   'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M',
   'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
 ];
+
+/** All 26 letters, in alphabet order. */
+export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+/** The two letters signed with a movement (the coach can't check these yet). */
+export const MOTION_LETTERS = ['J', 'Z'];
 
 /** A one-sentence description of how to make each letter. */
 export const LETTER_TIPS = {
@@ -29,6 +36,7 @@ export const LETTER_TIPS = {
   G: 'Point your index finger and thumb sideways, parallel to each other. Curl the other fingers.',
   H: 'Point your index and middle fingers sideways, together. Hold the other fingers down with your thumb.',
   I: 'Make a fist and hold your pinky straight up.',
+  J: 'Make the I handshape (pinky up), then draw a J in the air with your pinky: down, then curve toward your thumb side.',
   K: 'Index finger up, middle finger angled forward, thumb touching the middle finger between them.',
   L: 'Index finger straight up and thumb straight out to the side, making an L.',
   M: 'Tuck your thumb under your index, middle, and ring fingers.',
@@ -44,6 +52,7 @@ export const LETTER_TIPS = {
   W: 'Hold your index, middle, and ring fingers up and spread. Thumb holds down the pinky.',
   X: 'Make a fist, then raise your index finger and bend it into a hook.',
   Y: 'Stick out your thumb and pinky. Curl the three middle fingers down.',
+  Z: 'Point your index finger (other fingers curled), then draw a Z in the air: across, diagonal down, across.',
 };
 
 /** The most common mistake for each letter, and the letter it gets confused with. */
@@ -57,6 +66,7 @@ export const LETTER_MIXUPS = {
   G: 'Index and thumb point sideways. Two fingers sideways is H.',
   H: 'Two fingers point sideways. Two fingers pointing up is U.',
   I: 'Only the pinky is up. Pinky AND thumb out is Y.',
+  J: 'Same handshape as I. Holding still makes it an I; the J movement makes it a J.',
   K: 'The thumb touches the middle finger between the raised fingers. Without it, it looks like V.',
   L: 'Thumb and index make a right angle, like the letter L.',
   M: 'Three fingers over the thumb. Two fingers is N.',
@@ -72,7 +82,17 @@ export const LETTER_MIXUPS = {
   W: 'Three fingers up and spread; the thumb holds down the pinky.',
   X: 'The index is bent like a hook, not straight up.',
   Y: 'Thumb and pinky out. Only the pinky is I.',
+  Z: 'Held still, this handshape looks like D or the number 1. The Z movement is what makes it Z.',
 };
+
+/**
+ * Checks whether a letter is signed with a movement (J or Z).
+ * @param {string} letter - The letter to check.
+ * @returns {boolean} True for J and Z.
+ */
+export function isMotionLetter(letter) {
+  return MOTION_LETTERS.includes(letter);
+}
 
 /**
  * Checks whether a value is one of the 24 letters this app supports.

@@ -28,14 +28,16 @@ import { allFingerBends, buildAllTemplates } from './hints.js';
 import { handFeatures } from './features.js';
 import { loadReferenceHands } from './reference.js';
 import { shouldLearn, addLearnedSample, countBySource } from './learning.js';
-import { STATIC_LETTERS } from './letters.js';
-import { addAttempt, makeAttempt } from './progress.js';
+import { STATIC_LETTERS, isMotionLetter } from './letters.js';
+import { addAttempt, makeAttempt, practiceStreak, lettersToPractice } from './progress.js';
+import { FactDeck } from './facts.js';
+import { renderFingerKey } from './diagram.js';
 import {
   loadData, saveData, emptyData, makeExportJson, parseImportJson, mergeData, loadSettings, saveSettings, makeSampleId,
 } from './storage.js';
 import {
   byId, showScreen, showBanner, hideBanner, setCameraStatus, renderProgress, renderAlphabetChart,
-  renderAccuracyReport, makeConfirmButton, downloadTextFile, renderHeroArt, CAMERA_SCREENS,
+  renderAccuracyReport, makeConfirmButton, downloadTextFile, renderHeroArt, showFact, CAMERA_SCREENS,
 } from './ui.js';
 import { shortcutFor } from './keyboard.js';
 import { drawLiveHand, clearCanvas, matchCanvasToVideo } from './draw.js';
@@ -100,6 +102,7 @@ let noHandMessageShowing = false;
 let detectionErrorShown = false;
 let currentScreen = 'home';
 let modes = {};
+const facts = new FactDeck();
 
 // ---------- Data helpers ----------
 
@@ -252,6 +255,85 @@ function openModeWithLetter(screenName, letter) {
     goTo(screenName);
   } else {
     window.location.hash = screenName;
+  }
+}
+
+/**
+ * Switches every diagram between right-handed and left-handed pictures.
+ * @param {'right'|'left'} hand - The hand the user signs with.
+ * @returns {void}
+ */
+function setHand(hand) {
+  setSetting('flipDiagrams', hand === 'left');
+  showHandSwitch();
+  refreshDiagrams();
+}
+
+/**
+ * Updates the Right / Left switch in the header to match the setting.
+ * @returns {void}
+ */
+function showHandSwitch() {
+  const current = app.settings.flipDiagrams ? 'left' : 'right';
+  for (const button of document.querySelectorAll('.hand-switch button')) {
+    button.setAttribute('aria-checked', String(button.dataset.hand === current));
+  }
+}
+
+/**
+ * Redraws every diagram that's on screen (after the hand switch changes).
+ * @returns {void}
+ */
+function refreshDiagrams() {
+  const flipX = app.settings.flipDiagrams;
+  renderFingerKey(byId('camera-key'), { flipX });
+  renderFingerKey(byId('alphabet-key'), { flipX });
+  if (currentScreen === 'home') {
+    renderHeroArt(byId('hero-art'), flipX);
+  }
+  if (currentScreen === 'alphabet') {
+    renderAlphabet();
+  }
+  if (modes[currentScreen] && modes[currentScreen].refreshDiagrams) {
+    modes[currentScreen].refreshDiagrams();
+  }
+}
+
+/**
+ * Puts a fresh fun fact into every "Did you know?" card on the visible screen.
+ * @param {string} screenName - The screen that just opened.
+ * @returns {void}
+ */
+function showFactsFor(screenName) {
+  const sectionId = CAMERA_SCREENS.includes(screenName) ? 'screen-camera' : 'screen-' + screenName;
+  for (const slot of byId(sectionId).querySelectorAll('[data-fact-slot]')) {
+    // On the Alphabet, start with the left-handed fact (it explains the hand switch).
+    const fact = screenName === 'alphabet' && !slot.dataset.shown ? facts.find('Left-handed signers') : facts.next();
+    slot.dataset.shown = 'yes';
+    showFact(slot, fact);
+  }
+}
+
+/**
+ * Opens the Spell screen and starts teaching one letter (used for J and Z).
+ * @param {string} letter - The letter.
+ * @returns {void}
+ */
+function openSpellWith(letter) {
+  modes.spell.startPhrase(letter);
+  window.location.hash = 'spell';
+}
+
+/**
+ * Opens a letter from the Alphabet: still letters go to Learn, J and Z to Spell.
+ * @param {string} letter - The letter that was clicked or typed.
+ * @returns {void}
+ */
+function openLetterFromAlphabet(letter) {
+  if (isMotionLetter(letter)) {
+    openSpellWith(letter);
+  } else {
+    openModeWithLetter('learn', letter);
   }
 }
 
@@ -559,7 +641,7 @@ function frameLoop() {
  * @returns {void}
  */
 function renderHome() {
-  renderHeroArt(byId('hero-art'));
+  renderHeroArt(byId('hero-art'), app.settings.flipDiagrams);
   const status = byId('home-status');
   if (app.reference.length === 0) {
     status.textContent = 'The real-signer reference did not load, so the coach only knows samples added on the Add Samples screen.';
@@ -570,6 +652,10 @@ function renderHome() {
   if (learned > 0) {
     text += ', plus ' + learned + ' of your own correct signs';
   }
+  const streak = practiceStreak(app.data.attempts, Date.now());
+  if (streak > 0) {
+    text += ' · 🔥 ' + streak + '-day practice streak';
+  }
   status.textContent = text;
 }
 
@@ -578,11 +664,22 @@ function renderHome() {
  * @returns {void}
  */
 function renderAlphabet() {
-  byId('alphabet-flip').checked = app.settings.flipDiagrams;
   renderAlphabetChart(byId('alphabet-grid'), {
     mastered: listMasteredLetters(),
     flipX: app.settings.flipDiagrams,
-    onPick: (letter) => openModeWithLetter('learn', letter),
+    onPick: openLetterFromAlphabet,
+  });
+}
+
+/**
+ * Fills in the Progress screen (with the streak and "practice next" letters).
+ * @returns {void}
+ */
+function showProgress() {
+  renderProgress(app.data.attempts, app.data.bestScores, {
+    streak: practiceStreak(app.data.attempts, Date.now()),
+    practiceNext: lettersToPractice(app.data.attempts, STATIC_LETTERS, 6),
+    onPractice: (letter) => openModeWithLetter('learn', letter),
   });
 }
 
@@ -626,11 +723,12 @@ function goTo(screenName) {
     renderAlphabet();
   }
   if (screenName === 'progress') {
-    renderProgress(app.data.attempts, app.data.bestScores);
+    showProgress();
   }
   if (screenName === 'data') {
     renderDataSummary();
   }
+  showFactsFor(screenName);
 }
 
 /**
@@ -728,7 +826,7 @@ function onKeyDown(event) {
     return;
   }
   if (currentScreen === 'alphabet' && action.startsWith('pick:')) {
-    openModeWithLetter('learn', action.slice(5));
+    openLetterFromAlphabet(action.slice(5));
     return;
   }
   if (modes[currentScreen]) {
@@ -761,10 +859,12 @@ function setUpEventListeners() {
   document.addEventListener('keydown', onKeyDown);
   byId('banner-close').addEventListener('click', hideBanner);
   byId('alphabet-print').addEventListener('click', () => window.print());
-  byId('alphabet-flip').addEventListener('change', () => {
-    setSetting('flipDiagrams', byId('alphabet-flip').checked);
-    renderAlphabet();
-  });
+  for (const button of document.querySelectorAll('.hand-switch button')) {
+    button.addEventListener('click', () => setHand(button.dataset.hand));
+  }
+  for (const slot of document.querySelectorAll('[data-fact-slot]')) {
+    slot.querySelector('.fact-next').addEventListener('click', () => showFact(slot, facts.next()));
+  }
   byId('camera-retry').addEventListener('click', ensureCameraRunning);
   byId('accuracy-run').addEventListener('click', runAccuracyTest);
   byId('export-button').addEventListener('click', exportData);
@@ -793,7 +893,7 @@ function setUpEventListeners() {
   makeConfirmButton(byId('progress-reset'), () => {
     app.data.attempts = [];
     persist();
-    renderProgress(app.data.attempts, app.data.bestScores);
+    showProgress();
   });
 }
 
@@ -839,6 +939,9 @@ async function start() {
   };
 
   setUpEventListeners();
+  showHandSwitch();
+  renderFingerKey(byId('camera-key'), { flipX: app.settings.flipDiagrams });
+  renderFingerKey(byId('alphabet-key'), { flipX: app.settings.flipDiagrams });
 
   // Start loading the hand tracker right away in the background. If it
   // fails here, the camera screen will show the error when it opens.

@@ -11,6 +11,7 @@
  */
 
 import { LetterSmoother } from '../smoothing.js';
+import { renderHandDiagram } from '../diagram.js';
 import { byId, setMeter, renderVotes, formatPercent } from '../ui.js';
 
 /**
@@ -21,6 +22,7 @@ import { byId, setMeter, renderVotes, formatPercent } from '../ui.js';
 export function createFreeMode(app) {
   const smoother = new LetterSmoother();
   let typedText = '';
+  let diagramLetter = '';
 
   const letterBox = byId('free-letter');
   const message = byId('free-message');
@@ -34,6 +36,20 @@ export function createFreeMode(app) {
   }
 
   /**
+   * Shows the diagram of the recognized letter, so you can compare your hand with it.
+   * @param {string} letter - The letter, or "?" for none.
+   * @returns {void}
+   */
+  function showLetterDiagram(letter) {
+    const key = letter + '|' + app.settings.flipDiagrams;
+    if (key === diagramLetter) {
+      return;
+    }
+    diagramLetter = key;
+    renderHandDiagram(byId('free-diagram'), letter === '?' ? '' : letter, { flipX: app.settings.flipDiagrams });
+  }
+
+  /**
    * Resets the live display to its "nothing recognized" look.
    * @param {string} text - What to show in the message line.
    * @returns {void}
@@ -41,6 +57,7 @@ export function createFreeMode(app) {
   function showNothing(text) {
     letterBox.textContent = '?';
     letterBox.classList.remove('locked');
+    showLetterDiagram('?');
     byId('free-confidence').textContent = '-';
     setMeter(byId('free-confidence-bar'), 0);
     setMeter(byId('free-hold-bar'), 0);
@@ -85,6 +102,13 @@ export function createFreeMode(app) {
       smoother.reset();
     },
 
+    /** Redraws the diagram (after the Right / Left hand switch changes). @returns {void} */
+    refreshDiagrams() {
+      const letter = letterBox.textContent;
+      diagramLetter = '';
+      showLetterDiagram(letter);
+    },
+
     /**
      * Handles a keyboard shortcut (see keyboard.js).
      * @param {string} action - "space", "backspace", or "clear".
@@ -121,6 +145,7 @@ export function createFreeMode(app) {
       }
 
       letterBox.textContent = shownLetter;
+      showLetterDiagram(shownLetter);
       letterBox.classList.toggle('locked', smooth.holdProgress >= 1);
       byId('free-confidence').textContent = guess.letter + ': ' + formatPercent(guess.confidence) + ' of neighbors agree';
       setMeter(byId('free-confidence-bar'), guess.confidence);

@@ -219,7 +219,7 @@ button, label.button, input {
 }
 
 /* On narrower laptops, show icons only (the active screen keeps its label). */
-@media (max-width: 1220px) {
+@media (max-width: 1360px) {
   .nav button span {
     display: none;
   }
@@ -352,6 +352,40 @@ main {
 
 @keyframes show-late {
   to { opacity: 1; }
+}
+
+/* Right / Left hand switch in the header */
+.hand-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+
+.hand-switch > .icon {
+  margin: 0 4px 0 6px;
+}
+
+.hand-switch button {
+  padding: 5px 11px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hand-switch button[aria-checked="true"] {
+  background: var(--surface);
+  color: var(--brand-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ===================== 4. Reusable pieces ===================== */
@@ -799,6 +833,163 @@ kbd {
   color: var(--brand);
 }
 
+/* Finger color key */
+.key-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.key-card.compact {
+  margin-top: 14px;
+  padding: 14px 16px;
+}
+
+.finger-key {
+  display: block;
+  width: 230px;
+  height: 190px;
+  flex-shrink: 0;
+}
+
+.key-card.compact .finger-key {
+  width: 200px;
+  height: 165px;
+}
+
+.key-title {
+  margin: 0 0 4px;
+  font-weight: 800;
+}
+
+.text-bad {
+  color: var(--bad);
+}
+
+/* "Did you know?" fun facts */
+.fact-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #fffaf0, #fff4d6);
+  border: 1px solid #f7dca0;
+}
+
+.screen > .fact-card {
+  margin: 18px 0;
+}
+
+.fact-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #fde68a;
+  color: #92400e;
+  font-size: 1.15rem;
+}
+
+.fact-body {
+  flex: 1;
+}
+
+.fact-topic {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #92400e;
+}
+
+.fact-text {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+}
+
+.fact-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #f0c66d;
+  background: #ffffff;
+  color: #92400e;
+  font-size: 0.85rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.fact-next:hover {
+  background: #fef3c7;
+}
+
+/* Learn: mastery count */
+.mastery {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.mastery-count {
+  margin: 0;
+  font-weight: 800;
+  color: var(--good);
+}
+
+.label.spaced {
+  margin-top: 16px;
+}
+
+/* Progress: practice next */
+.practice-next {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.practice-letter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  font-size: 1.5rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.practice-letter small {
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--ink-3);
+}
+
+.practice-letter:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.summary-card.streak {
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  border-color: #fdba74;
+}
+
+.summary-card.streak .score-number {
+  color: #c2410c;
+}
+
 /* ===================== 5. Screens ===================== */
 
 /* ---------- Home ---------- */
@@ -1002,6 +1193,42 @@ kbd {
 }
 
 /* ---------- Alphabet ---------- */
+
+.alphabet-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.alphabet-intro .fact-card {
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .alphabet-intro {
+    grid-template-columns: 1fr;
+  }
+}
+
+.alphabet-card.motion {
+  border-style: dashed;
+  border-color: #c4b5fd;
+}
+
+.alphabet-card.motion .card-letter {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+}
+
+.motion-badge {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #5b21b6;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
 
 .toolbar {
   display: flex;
@@ -1728,6 +1955,9 @@ kbd {
 }
 
 @media (max-width: 640px) {
+  .fact-card {
+    flex-wrap: wrap;
+  }
   .topbar-inner,
   main {
     padding-left: 16px;
@@ -1756,7 +1986,7 @@ kbd {
 /* ---------- Printing the alphabet chart ---------- */
 
 @media print {
-  .topbar, .banner, .no-print, .page-sub, .note, .site-footer, .eyebrow {
+  .topbar, .banner, .no-print, .page-sub, .note, .site-footer, .eyebrow, .fact-card, .alphabet-intro {
     display: none !important;
   }
   body {

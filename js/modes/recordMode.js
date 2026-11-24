@@ -206,6 +206,11 @@ export function createRecordMode(app) {
       cancel();
     },
 
+    /** Redraws the diagram (after the Right / Left hand switch changes). @returns {void} */
+    refreshDiagrams() {
+      refresh();
+    },
+
     /**
      * Pre-selects a letter (used by Learn's "Record this letter" button).
      * @param {string} letter - The letter to record.

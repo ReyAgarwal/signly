@@ -495,12 +495,14 @@ the average of the real signers:
   spots and kept the one whose distances to the fingertips and knuckles best
   match the real signers. For M, N, and T the thumb is hidden under the
   fingers, so MediaPipe has to guess where it is; those follow the ASL definition.
-- **Direction:** the real data showed P points *toward the camera* (not
-  straight down), and X is turned the same way as C, so we fixed those.
-- **Final check:** the coach (trained on real signers) recognizes **20 of the
-  24 drawings** as the right letter. The 4 it misses: P (drawn from the side so
-  both fingers are visible) and N, S, T (the same fist letters it mixes up for
-  real people).
+- **Direction:** the real data showed X is turned the same way as C, and
+  photos of real signers showed that in P the **middle finger points straight
+  down** while the **index slants down and forward**, so we fixed those.
+- **Final check:** the coach (trained on real signers) recognizes **21 of the
+  24 drawings** as the right letter. The 3 it misses are N, S, and T: the same
+  fist letters it mixes up for real people.
+- **J and Z** get a diagram of their starting handshape plus a dashed arrow
+  (an SVG "path") showing the movement. The coach can't check them yet.
 
 `tests/diagram-accuracy.test.js` re-checks this every time the tests run, so a
 change that makes a diagram drift away from real signing will fail.
