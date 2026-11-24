@@ -6,7 +6,8 @@ signing, tells you which finger to fix, and tracks your progress over time.
 
 - **Runs 100% offline.** No internet, no accounts, no cloud. Video never leaves the laptop.
 - **Plain HTML, CSS, and JavaScript.** No frameworks and no build step.
-- **Learns from your own hands.** You record samples, and the coach uses them to recognize letters with a k-nearest-neighbors (k-NN) classifier we wrote ourselves.
+- **Checks you against real signers.** The coach compares your hand with about **6,000 hands of real people signing**, taken from two public research datasets (CC BY 4.0), using a k-nearest-neighbors (k-NN) classifier we wrote ourselves. No setup or recording is needed, and it can't learn a wrong handshape from you.
+- **Keeps learning, safely.** It can save your *correct* signs to get used to your hand and camera, but only when the real signers strongly agree the sign is right.
 - **24 static letters** (A–Y, without J and Z, which need motion).
 
 > Theme fit: *"improves how people learn, teach, practice, or develop new skills."*
@@ -21,12 +22,12 @@ signing, tells you which finger to fix, and tracks your progress over time.
 |--------|--------------|
 | **Home** | Big buttons for every mode, a status line ("120 samples recorded for 4 letters..."), and a list of keyboard shortcuts |
 | **Alphabet** | A **diagram of every handshape**, with how-to text and a "Watch out" note about the letter it's most often confused with. Click or type a letter to practice it. Can be flipped for left-handed signers, and printed as a study sheet. |
-| **Record** | Pick a letter (the diagram shows the shape to make), press Record or Space, and the coach saves ~30 snapshots of your hand in 3 seconds. Shows the sample count for every letter, and lets you delete a letter's samples. |
 | **Free Sign** | Sign anything. Shows the recognized letter, the confidence %, the actual k-NN neighbor votes, and types out letters you hold steady. |
-| **Learn** | Pick a target letter. A **diagram** shows how to make it, next to a skeleton of the average of your recorded samples. Live hints tell you which finger to fix and draw that finger in **red** on the camera *and* the diagram. Hold the right letter for half a second to get a success animation, then it moves to the next letter automatically (or press **Enter**). Letters with no samples yet can still be studied from the diagram. |
+| **Learn** | Pick a target letter. A **diagram** shows how to make it, next to a skeleton of the **average real signer's hand**. Live hints tell you which finger to fix and draw that finger in **red** on the camera *and* the diagram. Hold the right letter for half a second to get a success animation, then it moves to the next letter automatically (or press **Enter**). |
 | **Spell-a-Word** | 60-second game: spell short words letter by letter, with a small picture of the next letter (can be turned off). +10 per letter, +20 per word. Saves your best score. |
 | **Progress** | Accuracy for every letter, and for every day, so you can see improvement over time. |
-| **Test & Data** | **Accuracy test** (hides 20% of samples, measures accuracy, shows which letters get confused) and **Export/Import** of all data as a JSON file. |
+| **Test & Data** | **Fair accuracy test** (hides each person in turn and recognizes their signs using everyone else, shows per-person and per-letter accuracy and which letters get confused), what the coach knows (real signers / teacher-added / learned from you), the **keep learning** switch, **Export/Import**, and dataset credits. |
+| **Add Samples** | *Optional teacher tool.* A fluent signer or ASL teacher can record extra correct examples (about 30 snapshots in 3 seconds). Learners never need it. |
 
 ### Keyboard shortcuts
 
@@ -34,12 +35,12 @@ Your hands are busy signing, so most things work from the keyboard:
 
 | Where | Keys |
 |-------|------|
-| Anywhere | `1`–`7` open a screen (same order as the menu) · `Esc` Home |
+| Anywhere | `1`–`7` open a screen (same order as the menu: Alphabet, Learn, Spell, Free Sign, Progress, Test & Data, Add Samples) · `Esc` Home |
 | Alphabet | Type a letter to practice it in Learn |
-| Record | `Space` or `Enter` record · `←` `→` change letter · type a letter to pick it |
 | Learn | `Enter` or `→` next letter · `←` previous letter · type a letter to jump to it |
-| Free Sign | `Space` add a space · `Backspace` delete · `Delete` clear |
 | Spell | `Enter` start / play again · `→` skip word |
+| Free Sign | `Space` add a space · `Backspace` delete · `Delete` clear |
+| Add Samples | `Space` or `Enter` record · `←` `→` change letter · type a letter to pick it |
 
 ### About the diagrams
 
@@ -49,6 +50,20 @@ bends, where the thumb points, how the hand is turned), `handModel.js` turns
 those numbers into a 3D hand, and `diagram.js` draws it. Each picture shows a
 **right hand as you'll see it in the mirror video**, with the same finger
 colors as the live skeleton. See `docs/HOW_IT_WORKS.md` for the math.
+
+The diagrams were **checked against the real signers**: every diagram's finger
+bends are within the range real people use, thumb positions were fitted to the
+real data (except M, N, T, where the thumb is hidden from the camera and the ASL
+definition was used), and the coach recognizes 20 of the 24 drawings as the right
+letter. A unit test keeps it that way (`tests/diagram-accuracy.test.js`).
+
+### Where the "answer key" comes from
+
+`data/reference-hands.json` holds the 21 hand points (no photos) of about 6,000
+hands of real people signing the 24 static letters, made from two CC BY 4.0
+datasets on Mendeley Data. **Fair accuracy test** (each person hidden in turn):
+**76% overall**, from 54% to 88% depending on the person. `tools/README.md`
+explains every step and the results. Credits are in `data/ATTRIBUTION.md`.
 
 ---
 
@@ -80,18 +95,16 @@ Everything the app needs is inside this folder:
 
 **Before competition:** turn off Wi-Fi and run through every mode once, to prove it works offline.
 
-### First-time setup (record samples)
+### First time using it
 
-The coach doesn't know any letters until you teach it:
+There's nothing to set up: the coach already knows every letter.
 
-1. Look through the **Alphabet** screen to see each handshape.
-2. Go to **Record**.
-3. Click a letter (start with **A**), copy the diagram, and press **Record (3 sec)** (or `Space`).
-   After the 3-2-1 countdown, move your hand slightly while it records.
-4. Do this 2 or 3 times per letter (aim for 30–60+ samples per letter). Press `→` for the next letter.
-5. For best results, have **several teammates** record, and use **both hands**.
-6. Go to **Test & Data → Export** to back up your samples. Share the file so
-   teammates can **Import** it (imports are merged, and duplicates are skipped).
+1. Open the **Alphabet** (`1`) and look through the handshapes.
+2. Open **Learn** (`2`), copy the picture, and hold the sign steady.
+3. Play **Spell-a-Word** (`3`) once you know a few letters.
+
+**Optional:** to back up progress (and anything the coach learned from you), use
+**Test & Data → Export**. A fluent signer can add extra examples on **Add Samples**.
 
 ---
 
@@ -103,7 +116,7 @@ The unit tests use Node's built-in test runner. **There is nothing to install.**
 node --test          # or: npm test
 ```
 
-There are 72 tests in `tests/`:
+There are 84 tests in `tests/`:
 
 | Test file | What it checks |
 |-----------|----------------|
@@ -114,6 +127,8 @@ There are 72 tests in `tests/`:
 | `games-progress-storage.test.js` | Spell-a-Word scoring and timer, progress statistics, saving, loading, import/export |
 | `handModel.test.js` | Diagram hand model: bone lengths, rotations, the thumb really touching the fingertip in F/O/D/W, A/S/T thumbs in different places, back-to-front drawing order |
 | `keyboard-settings.test.js` | Which key does what on each screen, not stealing keys from buttons/text boxes, saving settings |
+| `features-reference-learning.test.js` | Feature vector (tilting the hand doesn't change the shape part), the real-signer data (all 24 letters, several people, valid numbers, credits), the keep-learning safety rules, and the fair leave-one-person-out test |
+| `diagram-accuracy.test.js` | Every diagram's finger bends match real signers, and the coach recognizes at least 20 of 24 diagrams |
 
 `tests/helpers/fakeHand.js` builds pretend hands with exact, known finger bends,
 so the tests never need a camera.
@@ -145,7 +160,14 @@ js/
   handModel.js              Turns a recipe into a 3D hand (21 points), using rotations
   diagram.js                Draws the 3D hand as an SVG picture (back-to-front)
   keyboard.js               Decides what each key press means on each screen
-  modes/recordMode.js       Record Samples screen
+  features.js               The 86-number hand description k-NN compares (shape, direction, bends, thumb, crossing)
+  reference.js              Loads the real-signer answer key (data/reference-hands.json)
+  learning.js               "Keep learning" safety rules (only learn when real signers agree)
+
+data/reference-hands.json   ~6,000 real signers' hands (numbers only), from 2 CC BY 4.0 datasets
+data/ATTRIBUTION.md         Dataset credits and what we changed
+tools/                      How the reference data was built + the diagram checker (not needed to run the app)
+  modes/recordMode.js       Add Samples screen (optional teacher tool)
   modes/freeMode.js         Free Sign screen
   modes/learnMode.js        Learn screen (diagram, hints, auto-advance)
   modes/spellMode.js        Spell-a-Word screen
@@ -164,8 +186,9 @@ models/                     Hand landmark model
 ## Privacy
 
 - The webcam video is processed **on the laptop only** and is never saved or sent anywhere.
-- When you record a sample, the app saves just **63 numbers** (21 hand points × x, y, z), not a picture.
-- Data lives in the browser's localStorage. **Test & Data → Delete ALL** erases it.
+- When a sign is learned (or added on Add Samples), the app saves just **63 numbers** (21 hand points × x, y, z), not a picture.
+- Data lives in the browser's localStorage. **Test & Data → Delete added + learned samples and progress** erases it.
+- The real-signer reference contains only hand-point numbers, never photos or names.
 - We use MediaPipe **0.10.35**, the newest version that sends no usage metrics to Google
   (version 1.x and later do). See `vendor/mediapipe/README.md`.
 
@@ -176,6 +199,6 @@ models/                     Hand landmark model
 | "Camera permission was denied" | Click the camera icon at the right end of Chrome's address bar → Allow → **Try the camera again**. |
 | "The camera is busy" | Close Zoom, Teams, FaceTime, or other tabs using the camera. |
 | "No hand detected" | Hold one hand inside the video, about an arm's length away, with light on your hand (not behind you). |
-| A letter is often wrong | Record more samples of it (and of the letter it's confused with) from different angles. Check **Test & Data → Run accuracy test**. |
+| A letter is often wrong | Check the diagram and the "Watch out" note. Face the camera, keep your whole hand in view, and use good light. The hardest letters for the coach are P, X, R, and D (see **Test & Data**). A fluent signer can also add examples on **Add Samples**. |
 | Blank page / "code didn't load" | You opened the file directly. Run `python3 serve.py` and go to http://localhost:8000. |
 | "Address already in use" when starting the server | Another server is using port 8000. Stop it, or run `python3 serve.py 8001` and open http://localhost:8001. |

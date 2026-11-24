@@ -134,7 +134,7 @@ function makeNail(start, end, realLength, width, nailFacing, depth) {
 /**
  * Turns a posed 3D hand into a list of flat shapes, sorted back-to-front.
  * @param {Object} hand - From buildHand() in handModel.js.
- * @param {{flipX?:boolean, highlightFinger?:string|null, thumbLayer?:string}} options
+ * @param {{flipX?:boolean, highlightFinger?:string|null, thumbLayer?:string, showForearm?:boolean}} options
  * @returns {{shapes:Array<Object>, viewBox:number[]}} Shapes to draw and the picture frame.
  */
 export function buildDiagramShapes(hand, options = {}) {
@@ -148,11 +148,13 @@ export function buildDiagramShapes(hand, options = {}) {
   const palmDepth = averageDepth(palmCorners) - 0.05;
   shapes.push({ type: 'palm', points: palmCorners.map((p) => project(p, flipX)), depth: palmDepth });
 
-  // The forearm is always drawn first (behind everything).
-  shapes.push({
-    type: 'bone', finger: 'forearm', from: project(points[0], flipX), to: project(hand.forearmEnd, flipX),
-    width: 2.3, depth: -Infinity,
-  });
+  // The forearm is always drawn first (behind everything), unless the recipe hides it.
+  if (options.showForearm !== false) {
+    shapes.push({
+      type: 'bone', finger: 'forearm', from: project(points[0], flipX), to: project(hand.forearmEnd, flipX),
+      width: 2.3, depth: -Infinity,
+    });
+  }
 
   for (const finger of Object.keys(FIRST_LANDMARK)) {
     const first = FIRST_LANDMARK[finger];
@@ -297,7 +299,11 @@ export function renderHandDiagram(svg, letter, options = {}) {
     return;
   }
   const hand = buildHand(pose);
-  const { shapes, viewBox } = buildDiagramShapes(hand, { ...options, thumbLayer: pose.thumb.layer });
+  const { shapes, viewBox } = buildDiagramShapes(hand, {
+    ...options,
+    thumbLayer: pose.thumb.layer,
+    showForearm: pose.forearm !== false,
+  });
   svg.setAttribute('viewBox', viewBox.map((n) => n.toFixed(3)).join(' '));
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', 'Diagram of the handshape for the letter ' + letter);

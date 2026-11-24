@@ -80,8 +80,10 @@ test('every letter recipe builds 21 real (finite) points with correct bone lengt
   }
 });
 
-test('letters where the thumb touches a fingertip really touch (F, O, D, W)', () => {
-  const touches = { F: 8, O: 8, D: 12, W: 19 };
+test('letters where the thumb touches a fingertip really touch (F, O, D), and W holds the pinky', () => {
+  const pinkyGap = distance(buildHand(LETTER_POSES.W).landmarks[4], buildHand(LETTER_POSES.W).landmarks[20]);
+  assert.ok(pinkyGap < 2, 'W: the thumb should be on the pinky, but is ' + pinkyGap.toFixed(2) + ' away');
+  const touches = { F: 8, O: 8, D: 12 };
   for (const [letter, fingerPoint] of Object.entries(touches)) {
     const hand = buildHand(LETTER_POSES[letter]);
     const gap = distance(hand.landmarks[4], hand.landmarks[fingerPoint]);
@@ -89,10 +91,16 @@ test('letters where the thumb touches a fingertip really touch (F, O, D, W)', ()
   }
 });
 
-test('A, S, and T put the thumb tip in clearly different places', () => {
-  const thumbTip = (letter) => buildHand(LETTER_POSES[letter]).landmarks[4];
-  assert.ok(distance(thumbTip('A'), thumbTip('S')) > 1, 'A and S thumbs should differ');
-  assert.ok(distance(thumbTip('S'), thumbTip('T')) > 1, 'S and T thumbs should differ');
+test('A, S, and T put the thumb where each letter needs it', () => {
+  // Use each recipe without turning the hand, so x = across, y = up, z = out of the palm.
+  const hand = (letter) => buildHand({ ...LETTER_POSES[letter], view: [] }).landmarks;
+  const indexKnuckleX = hand('A')[5][0];
+  // A: thumb tip BESIDE the fist, past the index finger's side.
+  assert.ok(hand('A')[4][0] < indexKnuckleX - 0.5, 'A thumb should be on the side of the fist');
+  // S: thumb tip further IN FRONT of the fingers than in T.
+  assert.ok(hand('S')[4][2] > hand('T')[4][2] + 0.3, 'S thumb should be in front of the fingers');
+  // T: thumb tip HIGHER than in S (it pokes up between the index and middle fingers).
+  assert.ok(hand('T')[4][1] > hand('S')[4][1] + 0.3, 'T thumb tip should poke up higher');
 });
 
 test('the L thumb points sideways and the index points up', () => {

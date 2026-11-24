@@ -15,11 +15,14 @@ Every video frame (about 30 per second) goes through these steps:
  1. MediaPipe Hand Landmarker  ──►  21 points (x, y, z) on the hand
      │                               (camera.js)
      ▼
- 2. Normalize                  ──►  63 numbers that describe only the hand's SHAPE
+ 2. Normalize                  ──►  21 points: wrist at 0, palm size 1, left hands mirrored
      │                               (landmarks.js)
      ▼
- 3. k-Nearest Neighbors        ──►  "B, 80% confident"
-     │                               (classifier.js)
+ 2b. Describe                  ──►  86 numbers: shape, direction, bends, thumb, crossing
+     │                               (features.js)
+     ▼
+ 3. k-Nearest Neighbors        ──►  "B, 80% confident"  (compared with ~6,000 REAL signers' hands)
+     │                               (classifier.js + data/reference-hands.json)
      ▼
  4. Smoothing                  ──►  "B is steady... held 0.5 s... LOCKED IN!"
      │                               (smoothing.js)
@@ -30,6 +33,11 @@ Every video frame (about 30 per second) goes through these steps:
 
 We did **not** train a neural network. MediaPipe (made by Google) finds the
 hand points. Everything after that is math we wrote ourselves.
+
+**Where the "correct answers" come from:** the coach compares you with about
+6,000 hands of **real people signing**, taken from two public research datasets
+(see "The real-signer answer key" below). Because it doesn't use your own
+recordings as the answer key, it can't learn a wrong handshape from you.
 
 ---
 
@@ -129,15 +137,44 @@ the **same handshape** and differ only by direction:
 
 If we removed rotation, the coach couldn't tell these apart.
 
-### The result: a feature vector
+### The result: 63 numbers
 
-21 points × 3 numbers (x, y, z) = **63 numbers**. This list is called a
-**feature vector**, and it describes the hand's shape. Recorded samples store
-exactly these 63 numbers (rounded to 4 decimal places), not pictures.
+21 points × 3 numbers (x, y, z) = **63 numbers**. Saved samples store exactly
+these 63 numbers, not pictures.
+
+---
+
+## Step 2b: Describing the hand (features.js)
+
+Real people hold their hands at slightly different angles. If your whole hand
+is tilted 20°, all 63 numbers change, even though your handshape didn't. So
+before comparing, we turn the 63 numbers into an **86-number description** (the
+*feature vector*) made of five parts:
+
+| Part | Numbers | What it captures | Why |
+|------|---------|------------------|-----|
+| **Shape** | 63 | Every point measured from the **palm's own point of view**: "how far across the palm, up the palm, and out of the palm" | Tilting your whole hand doesn't change these |
+| **Direction** | 6 | Which way the fingers point and the palm faces | H vs U, P vs K, and G vs Q have the same shape but point different ways |
+| **Bends** | 5 | How curled each finger is (from hints.js), ÷ 100 | Easy-to-compare summary of each finger |
+| **Thumb** | 10 | Distance from the thumb tip to other finger joints | A, S, T, M, N, E differ mostly by where the thumb is |
+| **Crossing** | 2 | Is the index tip on the "wrong side" of the middle tip? | R (crossed) vs U (side by side) |
+
+**"From the palm's point of view"** uses the dot product: we build three
+directions attached to the palm (*across* = pinky knuckle → index knuckle,
+*up* = toward the fingers, *facing* = straight out of the palm, found with the
+**cross product**), and for each point we ask "how far along each direction?"
+That's `dot(point, direction)`, the same math as projecting onto an axis.
+
+**How we chose this design:** we tested each idea on people the coach had
+**never seen** (see the fair accuracy test below). Plain coordinates: 69%. Palm
+point of view + direction: 74%. Adding bends, thumb distances, and crossing: **77%**.
 
 ---
 
 ## Step 3: k-Nearest Neighbors (classifier.js)
+
+(The examples below use 2 numbers to keep the math small. The real coach does
+exactly the same thing with the 86-number feature vectors.)
 
 **Idea:** *You probably are the same letter as the recorded samples you look the most like.*
 
@@ -191,9 +228,8 @@ row shows each neighbor's vote as a dot, like `B ●●●●  D ●`.
 ### Why k-NN?
 
 - **No training step.** Record a new sample and it's used instantly.
-- **Works with small data.** 30 samples per letter is enough to start.
-- **Explainable.** "It found the 5 most similar samples and they voted."
-- **Fast enough.** 24 letters × 50 samples = 1,200 distances per frame, which takes well under a millisecond.
+- **Explainable.** "It found the 5 most similar real signers' hands and they voted."
+- **Fast enough.** About 6,000 distances (86 numbers each) per frame takes a few milliseconds.
 
 **Weakness:** letters that look almost the same (M/N, A/S/T/E) have samples
 that sit close together, so they get confused more. The accuracy test shows
@@ -286,10 +322,10 @@ still means more bent.)
 
 ### The template: the "average hand" for each letter
 
-For each letter, we look at every recorded sample and compute its five finger
-bends, then **average** them. That's the letter's template. We also average
-the 21 points to get an "average hand", which Learn mode draws as the
-**reference skeleton** (so no copyrighted pictures are needed).
+For each letter, we take the real signers' hands (plus any teacher-added
+samples), compute each one's five finger bends, and **average** them. That's
+the letter's template. We also average the 21 points to get an "average hand",
+which Learn mode draws as the small **"average of real signers"** skeleton.
 
 ### Choosing the hint
 
@@ -324,32 +360,56 @@ look right. Check your thumb position and the angle of your hand."*
 
 ---
 
-## The accuracy test (classifier.js → evaluateAccuracy)
+## The real-signer answer key (data/reference-hands.json)
 
-How do we know the recognizer is any good? We test it on samples it
-**hasn't seen**:
+We used two public datasets of photos of people fingerspelling (both CC BY 4.0;
+credits in `data/ATTRIBUTION.md`). We ran the same MediaPipe the app uses on
+about 9,000 of the photos, kept the 21 hand points of each hand it found,
+normalized them exactly like the app does, and kept at most 50 per letter per
+person so nobody dominates. Result: **6,036 hands, about 250 per letter, from at
+least 4 different people**. Only numbers are stored, never photos. `tools/README.md`
+shows every step.
 
-1. For each letter, hide the **newest 20%** of its samples (the "test set").
-2. Use the other 80% (the "training set") as the k-NN samples.
-3. Classify each hidden sample and check if the answer is right.
+## The fair accuracy test: "leave one person out" (classifier.js → evaluateUnseenPeople)
 
-The report shows:
-- **Overall accuracy**: correct ÷ total.
-- **Per-letter accuracy**: which letters are weak.
-- **Confusion matrix**: rows = the real letter, columns = the guess. Numbers
-  on the diagonal (green) are correct; anything off the diagonal (red) is a
-  mix-up, e.g. "M was mistaken for N 3 times".
+How well does the coach work for a **brand-new person**? We can't just test on
+random samples, because a person's own samples look almost identical to each
+other, which would be like peeking at the answer key. Instead:
 
-**Why the newest 20%, not random?** Samples recorded back to back (a tenth of a
-second apart) are nearly identical. If we picked test samples at random, almost
-every test sample would have a "twin" in the training set, which is like
-peeking at the answer key. Holding out the newest ones is more honest.
+1. Pick one person. Hide **all** of their hands.
+2. Recognize each hidden hand using **only the other people's** hands.
+3. Repeat for every person, and add up the score.
 
-**Be careful:** the score is still optimistic if all of a letter's samples came
-from one recording. For the most honest number, record a final round of samples
-on a different day, or by a different person, before running the test.
+Result: **76% overall** (54%–88% depending on the person). The report shows:
+- **Accuracy for each hidden person**
+- **Per-letter accuracy**: the hardest are P, X, R, and D
+- **Confusion matrix**: rows = the real letter, columns = the guess. Green
+  (diagonal) is correct; red is a mix-up, e.g. "R was mistaken for U 12 times"
 
----
+The mix-ups are the same letters people mix up: R/U, M/N, A/S/T/E, P/Q/X, C/O.
+The biggest way to improve would be more signers in the answer key.
+
+## Keep learning, safely (learning.js)
+
+The coach can get used to **your** hand, lighting, and camera. But a coach that
+learns from its student could learn the student's mistakes, so it only saves a
+sign when **all three** are true:
+
+1. You were asked for a letter (in Learn or Spell-a-Word),
+2. the coach locked in that same letter, and
+3. the **real signers alone** (nothing previously learned from you) agree
+   strongly: at least **4 of the 5** nearest neighbors.
+
+Rule 3 is the safety lock. A sign can only be learned if it already looks like
+the real signers' version, so learning just makes the coach recognize your
+*correct* signing more reliably. Learned samples are capped at 30 per letter
+(the real signers always outnumber them), are never used for the templates
+or finger hints, and can be erased with one button. You can switch learning off
+on the Test & Data screen.
+
+**Teachers can add examples too:** on the *Add Samples* screen, a fluent signer
+can record extra correct examples. These are trusted, so only a fluent signer
+should use that screen.
 
 ## Progress tracking (progress.js)
 
@@ -424,8 +484,24 @@ The result is 21 points in the **same order MediaPipe uses**, so the same
 - Colors match the live skeleton (thumb yellow, index green, middle blue,
   ring purple, pinky teal), and the finger a hint is about turns **red**.
 
-**Important:** the recipes are our best approximation of each handshape. Check
-them against a trusted ASL resource or a fluent signer, and adjust the numbers in
-`handPoses.js` if a picture looks off. The unit tests in `tests/handModel.test.js`
-will tell you if a change breaks something (for example, if the thumb in F no
-longer touches the index finger).
+### 4. Checking the diagrams against real signers (tools/fit-diagrams.mjs)
+
+A drawing can look nice and still be wrong, so we compared every diagram with
+the average of the real signers:
+
+- **Finger bends:** the first version drew fists much tighter than real people
+  make them (253° vs. about 205°) and over-bent the thumb. We loosened them.
+- **Thumb position:** for most letters, a program tried thousands of thumb-tip
+  spots and kept the one whose distances to the fingertips and knuckles best
+  match the real signers. For M, N, and T the thumb is hidden under the
+  fingers, so MediaPipe has to guess where it is; those follow the ASL definition.
+- **Direction:** the real data showed P points *toward the camera* (not
+  straight down), and X is turned the same way as C, so we fixed those.
+- **Final check:** the coach (trained on real signers) recognizes **20 of the
+  24 drawings** as the right letter. The 4 it misses: P (drawn from the side so
+  both fingers are visible) and N, S, T (the same fist letters it mixes up for
+  real people).
+
+`tests/diagram-accuracy.test.js` re-checks this every time the tests run, so a
+change that makes a diagram drift away from real signing will fail.
+**Still recommended:** have an ASL teacher look at the diagrams too.

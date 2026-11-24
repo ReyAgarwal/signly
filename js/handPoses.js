@@ -17,6 +17,7 @@
  *   thumb.layer = 'front' or 'behind': draw the thumb in front of / behind the fingers
  *       (or a list of 3, one per thumb bone, e.g. tucked under but the tip in front)
  *   view = rotations of the whole hand, e.g. [['y', -70]] turns the palm to the side
+ *   forearm = false hides the arm (for letters where the bent wrist would make it confusing)
  *
  * All recipes are for a RIGHT hand as you see it in the mirror (the webcam view).
  */
@@ -27,7 +28,9 @@
  * @returns {{spread:number, flex:number[]}} The finger pose.
  */
 function curled(spread = 0) {
-  return { spread, flex: [88, 100, 65] };
+  // About 205 degrees in total, which matches real signers' fists (measured
+  // from the reference data); a tighter curl looked unnatural.
+  return { spread, flex: [75, 85, 45] };
 }
 
 /**
@@ -36,7 +39,18 @@ function curled(spread = 0) {
  * @returns {{spread:number, flex:number[]}} The finger pose.
  */
 function straight(spread = 0) {
-  return { spread, flex: [0, 0, 0] };
+  // Real fingers are never perfectly straight, so add a tiny natural bend.
+  return { spread, flex: [3, 8, 5] };
+}
+
+/**
+ * A finger folded down but held loosely (for example, ring and pinky held by
+ * the thumb in U, V, and R). Real signers fold these less than in a fist.
+ * @param {number} spread - Sideways tilt in degrees.
+ * @returns {{spread:number, flex:number[]}} The finger pose.
+ */
+function folded(spread = 0) {
+  return { spread, flex: [70, 75, 25] };
 }
 
 /**
@@ -51,50 +65,55 @@ function bent(spread, knuckle, middle, top) {
   return { spread, flex: [knuckle, middle, top] };
 }
 
-/** Thumb lying across the FRONT of curled fingers (S, I, X, ...). */
-const THUMB_ACROSS_FRONT = { base: [0.25, 0.5, 1], middle: [1, 0.25, 0.5], tip: [1, -0.15, 0.05], layer: 'front' };
-
-/** Thumb holding down the curled ring and pinky fingers (U, V, H, R, K). */
-const THUMB_HOLDS_RING_PINKY = { base: [0.35, 0.5, 1], middle: [1, 0.35, 0.55], tip: [1, 0, 0.1], layer: 'front' };
-
-/** Thumb holding down ring and pinky, but hidden behind the hand (for H, seen from the back). */
-const THUMB_HIDDEN_ON_FINGERS = { base: [0.35, 0.5, 1], middle: [1, 0.35, 0.55], tip: [1, 0, 0.1] };
+/*
+ * Where the thumb-tip "reach" numbers come from:
+ *   - A, E, H, I, K, R, S, U, V, W, X: FITTED by tools/fit-diagrams.mjs, which
+ *     searched for the spot whose distances to the fingertips and knuckles best
+ *     match the average of the real signers in data/reference-hands.json.
+ *   - M, N, T: set by hand from the ASL definition (where the thumb tip peeks
+ *     out). In these letters the thumb is hidden under the fingers, so MediaPipe
+ *     has to guess where it is, and the real-signer data isn't reliable there.
+ */
 
 /** Thumb tucked under the fingers, with only its tip drawn on top (M, N, T). */
 const TIP_PEEKS_OUT = ['behind', 'behind', 'front'];
 
-/** Most letters face you, turned a little so you can see the thumb side. */
-const FACING_YOU = [['y', 15]];
+/**
+ * Most letters face you. Real signers angle the palm slightly toward the
+ * middle of their body (measured from the reference data), so we do too.
+ */
+const FACING_YOU = [['y', -8]];
 
 /** The recipe for every letter. */
 export const LETTER_POSES = {
   A: {
-    view: [['y', 25]],
+    view: [['y', -5]],
     fingers: { index: curled(-3), middle: curled(0), ring: curled(3), pinky: curled(6) },
     // Thumb straight up against the SIDE of the index finger (not across the front).
-    thumb: { base: [-0.35, 0.75, 0.85], middle: [-0.1, 1, 0.1], tip: [0, 1, -0.05] },
+    thumb: { base: [-0.3, 0.75, 0.8], reach: [-2.3, 3.95, 0.8] },
   },
   B: {
     view: FACING_YOU,
     fingers: { index: straight(-2), middle: straight(0), ring: straight(2), pinky: straight(5) },
     // Thumb folded across the palm.
-    thumb: { base: [0.45, 0.6, 0.65], middle: [1, 0.15, 0.3], tip: [1, -0.1, 0], layer: 'front' },
+    thumb: { base: [0.45, 0.6, 0.65], middle: [1, 0.3, 0.35], tip: [1, 0.15, 0.1], layer: 'front' },
   },
   C: {
-    view: [['y', -75]],
-    fingers: { index: bent(-2, 40, 50, 35), middle: bent(0, 40, 50, 35), ring: bent(2, 40, 50, 35), pinky: bent(4, 40, 50, 35) },
-    thumb: { base: [-0.1, 0.55, 1], middle: [0, 0.9, 0.8], tip: [0.05, 1, 0.3] },
+    view: [['y', -60]],
+    fingers: { index: bent(-2, 30, 40, 30), middle: bent(0, 30, 40, 30), ring: bent(2, 30, 40, 30), pinky: bent(4, 30, 40, 30) },
+    // Thumb curved only a little, opposite the fingers, leaving a gap.
+    thumb: { base: [-0.1, 0.55, 1], middle: [0, 0.8, 0.9], tip: [0.05, 1, 0.7] },
   },
   D: {
-    view: [['y', 10]],
-    fingers: { index: straight(-3), middle: bent(0, 50, 90, 40), ring: bent(2, 55, 95, 40), pinky: bent(5, 60, 95, 40) },
-    thumb: { base: [0.3, 0.55, 1], touch: { finger: 'middle', at: 3 } },
+    view: FACING_YOU,
+    fingers: { index: straight(-3), middle: bent(0, 55, 70, 35), ring: bent(2, 55, 70, 38), pinky: bent(5, 45, 60, 28) },
+    thumb: { base: [0.2, 0.9, 0.9], touch: { finger: 'middle', at: 3 } },
   },
   E: {
     view: FACING_YOU,
-    fingers: { index: bent(-2, 30, 110, 75), middle: bent(0, 30, 110, 75), ring: bent(2, 30, 110, 75), pinky: bent(4, 35, 110, 75) },
+    fingers: { index: bent(-2, 30, 95, 45), middle: bent(0, 30, 95, 45), ring: bent(2, 30, 95, 45), pinky: bent(4, 30, 95, 45) },
     // Thumb tucked across the palm, under the bent fingertips.
-    thumb: { base: [0.35, 0.55, 0.8], middle: [1, 0.2, 0.35], tip: [1, -0.05, 0], layer: 'behind' },
+    thumb: { base: [-0.3, 0.75, 0.8], reach: [-1.1, 2.75, 1.55], layer: 'behind' },
   },
   F: {
     view: FACING_YOU,
@@ -110,19 +129,19 @@ export const LETTER_POSES = {
   },
   H: {
     view: [['y', 180], ['z', 90], ['x', 35]],
-    fingers: { index: straight(-1), middle: straight(1), ring: curled(3), pinky: curled(6) },
-    thumb: THUMB_HIDDEN_ON_FINGERS,
+    fingers: { index: straight(-1), middle: straight(1), ring: folded(3), pinky: folded(6) },
+    thumb: { base: [0.1, 0.8, 0.6], reach: [-1.4, 4.4, 0.95] },
   },
   I: {
     view: FACING_YOU,
     fingers: { index: curled(-3), middle: curled(0), ring: curled(3), pinky: straight(6) },
-    thumb: THUMB_ACROSS_FRONT,
+    thumb: { base: [0.5, 0.4, 0.8], reach: [-1.1, 4.55, 0.35], layer: 'front' },
   },
   K: {
     view: FACING_YOU,
-    fingers: { index: straight(-8), middle: bent(14, 35, 0, 0), ring: curled(3), pinky: curled(6) },
+    fingers: { index: straight(-8), middle: bent(14, 35, 10, 5), ring: curled(3), pinky: curled(6) },
     // Thumb tip touches the middle finger, in the gap between index and middle.
-    thumb: { base: [0, 0.6, 1], touch: { finger: 'middle', at: 0.5 }, layer: 'front' },
+    thumb: { base: [0.1, 0.8, 0.6], reach: [-1.4, 4.4, 0.95], layer: 'front' },
   },
   L: {
     view: FACING_YOU,
@@ -132,70 +151,75 @@ export const LETTER_POSES = {
   },
   M: {
     view: FACING_YOU,
-    fingers: { index: bent(-2, 80, 100, 50), middle: bent(0, 80, 100, 50), ring: bent(2, 80, 100, 50), pinky: curled(5) },
-    // Thumb tucked under three fingers; its tip peeks out between ring and pinky.
-    thumb: { base: [0.35, 0.6, 0.6], reach: [0.88, 2.2, 1.9], bend: [0, -0.6, 0.8], layer: TIP_PEEKS_OUT },
+    fingers: { index: bent(-2, 70, 70, 30), middle: bent(0, 70, 70, 30), ring: bent(2, 70, 70, 30), pinky: curled(5) },
+    // Thumb tucked under three fingers; its tip peeks out by the pinky.
+    thumb: { base: [0.35, 0.6, 0.6], reach: [0.88, 2.3, 1.9], layer: TIP_PEEKS_OUT },
   },
   N: {
     view: FACING_YOU,
-    fingers: { index: bent(-2, 80, 100, 50), middle: bent(0, 80, 100, 50), ring: curled(3), pinky: curled(5) },
+    fingers: { index: bent(-2, 70, 70, 30), middle: bent(0, 70, 70, 30), ring: curled(3), pinky: curled(5) },
     // Thumb tucked under two fingers; its tip peeks out between middle and ring.
-    thumb: { base: [0.3, 0.6, 0.6], reach: [0.05, 2.2, 1.95], bend: [0, -0.6, 0.8], layer: TIP_PEEKS_OUT },
+    thumb: { base: [0.3, 0.6, 0.6], reach: [0.05, 2.3, 1.95], layer: TIP_PEEKS_OUT },
   },
   O: {
-    view: [['y', -75]],
-    fingers: { index: bent(-2, 45, 65, 40), middle: bent(0, 45, 65, 40), ring: bent(2, 45, 65, 40), pinky: bent(4, 50, 65, 40) },
+    view: [['y', -60]],
+    fingers: { index: bent(-2, 40, 55, 35), middle: bent(0, 40, 55, 35), ring: bent(2, 40, 55, 35), pinky: bent(4, 42, 55, 30) },
     thumb: { base: [-0.1, 0.6, 1], touch: { finger: 'index', at: 3 } },
   },
   P: {
-    // The K handshape, tipped forward so the fingers point down.
-    view: [['x', 125], ['y', 25]],
-    fingers: { index: straight(-8), middle: bent(14, 35, 0, 0), ring: curled(3), pinky: curled(6) },
-    thumb: { base: [0, 0.6, 1], touch: { finger: 'middle', at: 0.5 }, layer: 'front' },
+    // The K handshape tipped forward: index points toward you, middle finger points down.
+    // Drawn from the side (turned like C) so both fingers are easy to see.
+    view: [['x', 80], ['y', -55]],
+    forearm: false,
+    fingers: { index: straight(-8), middle: bent(14, 95, 25, 10), ring: curled(3), pinky: curled(6) },
+    thumb: { base: [0, 0.6, 1], touch: { finger: 'middle', at: 0.6 }, layer: 'front' },
   },
   Q: {
-    // The G handshape, pointing down.
-    view: [['x', 155], ['y', 30]],
-    fingers: { index: straight(0), middle: curled(0), ring: curled(3), pinky: curled(6) },
+    // The G handshape, pointing down and forward.
+    view: [['x', 125], ['y', 35]],
+    forearm: false,
+    fingers: { index: bent(0, 10, 25, 15), middle: curled(0), ring: curled(3), pinky: curled(6) },
     thumb: { base: [-0.3, 1, 0.5], middle: [0, 1, 0.15], tip: [0.05, 1, 0], layer: 'front' },
   },
   R: {
     view: FACING_YOU,
     // Index and middle fingers crossed: the middle finger leans over the index.
-    fingers: { index: straight(7), middle: bent(-13, 12, 0, 0), ring: curled(3), pinky: curled(6) },
-    thumb: THUMB_HOLDS_RING_PINKY,
+    fingers: { index: straight(7), middle: bent(-13, 12, 0, 0), ring: folded(3), pinky: folded(6) },
+    thumb: { base: [0.1, 0.8, 0.6], reach: [-0.95, 3.95, 2.15], layer: 'front' },
   },
   S: {
     view: FACING_YOU,
     fingers: { index: curled(-3), middle: curled(0), ring: curled(3), pinky: curled(6) },
-    thumb: THUMB_ACROSS_FRONT,
+    // Thumb across the FRONT of the curled fingers.
+    thumb: { base: [0, 0.5, 1], reach: [-0.65, 3.2, 2.75], layer: 'front' },
   },
   T: {
     view: FACING_YOU,
-    fingers: { index: bent(-3, 70, 95, 60), middle: curled(0), ring: curled(3), pinky: curled(6) },
+    fingers: { index: bent(-3, 65, 75, 35), middle: curled(0), ring: curled(3), pinky: curled(6) },
     // Thumb tucked under the index finger; its tip pokes up between index and middle.
-    thumb: { base: [-0.05, 0.85, 0.6], reach: [-0.8, 3.75, 2.15], bend: [-0.6, -0.3, 0.2], layer: TIP_PEEKS_OUT },
+    thumb: { base: [-0.05, 0.85, 0.6], reach: [-0.8, 3.75, 2.15], layer: TIP_PEEKS_OUT },
   },
   U: {
     view: FACING_YOU,
-    fingers: { index: straight(-1), middle: straight(1), ring: curled(3), pinky: curled(6) },
-    thumb: THUMB_HOLDS_RING_PINKY,
+    fingers: { index: straight(-1), middle: straight(1), ring: folded(3), pinky: folded(6) },
+    thumb: { base: [-0.3, 0.75, 0.8], reach: [-0.35, 3.35, 1.7], layer: 'front' },
   },
   V: {
     view: FACING_YOU,
-    fingers: { index: straight(-13), middle: straight(10), ring: curled(3), pinky: curled(6) },
-    thumb: THUMB_HOLDS_RING_PINKY,
+    fingers: { index: straight(-13), middle: straight(10), ring: folded(3), pinky: folded(6) },
+    thumb: { base: [0, 0.5, 1], reach: [-0.5, 3.35, 1.4], layer: 'front' },
   },
   W: {
     view: FACING_YOU,
-    fingers: { index: straight(-14), middle: straight(0), ring: straight(12), pinky: curled(6) },
-    thumb: { base: [0.4, 0.5, 1], touch: { finger: 'pinky', at: 2.6 }, layer: 'front' },
+    fingers: { index: straight(-14), middle: straight(0), ring: straight(12), pinky: bent(6, 60, 55, 20) },
+    // Thumb holds down the pinky.
+    thumb: { base: [-0.3, 0.75, 0.8], reach: [0.4, 3.35, 1.4], layer: 'front' },
   },
   X: {
-    // Turned so you can see the hook of the index finger from the side.
-    view: [['y', 75]],
-    fingers: { index: bent(-3, 15, 95, 70), middle: curled(0), ring: curled(3), pinky: curled(6) },
-    thumb: THUMB_ACROSS_FRONT,
+    // Turned like C, so you can see the hook of the index finger from the side.
+    view: [['y', -50]],
+    fingers: { index: bent(-3, 5, 65, 30), middle: curled(0), ring: curled(3), pinky: curled(6) },
+    thumb: { base: [0.5, 0.4, 0.8], reach: [-2.15, 4.1, 1.25], layer: 'front' },
   },
   Y: {
     view: FACING_YOU,
