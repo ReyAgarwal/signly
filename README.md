@@ -1,4 +1,4 @@
-# ASL Fingerspelling Coach
+# Signly
 
 A browser app that helps people **learn the ASL fingerspelling alphabet**. It
 watches your hand through the laptop webcam, recognizes which letter you're
@@ -111,7 +111,7 @@ You need **Python 3** (already on Macs; on Windows install it from python.org
    python3 serve.py        # Mac / Linux
    python serve.py         # Windows
    ```
-   You should see `ASL Fingerspelling Coach is running at http://localhost:8000`.
+   You should see `Signly is running at http://localhost:8000`.
    (`python3 -m http.server 8000` also works on most computers. `serve.py` is
    safer because it fixes a Windows problem where `.js` files are sent with the
    wrong type and Chrome refuses to run them.)

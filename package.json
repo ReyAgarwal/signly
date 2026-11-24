@@ -1,7 +1,7 @@
 {
-  "name": "asl-fingerspelling-coach",
+  "name": "signly",
   "version": "0.1.0",
-  "description": "Offline browser app that coaches ASL fingerspelling using the webcam.",
+  "description": "Signly: an offline browser app that coaches ASL fingerspelling using the webcam.",
   "private": true,
   "type": "module",
   "scripts": {

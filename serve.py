@@ -1,7 +1,7 @@
 """
 serve.py
 --------
-A tiny web server for running the ASL Fingerspelling Coach offline.
+A tiny web server for running Signly (the ASL fingerspelling coach) offline.
 
 Usage (from this folder):
     python3 serve.py          (Mac / Linux)
@@ -65,7 +65,7 @@ def main():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
     server = CoachServer(("127.0.0.1", port), CoachRequestHandler)
-    print(f"ASL Fingerspelling Coach is running at http://localhost:{port}")
+    print(f"Signly is running at http://localhost:{port}")
     print("Open that address in Chrome. Press Ctrl+C here to stop the server.")
     try:
         server.serve_forever()

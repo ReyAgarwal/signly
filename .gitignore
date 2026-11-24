@@ -10,6 +10,7 @@ node_modules/
 .idea/
 
 # Exported data files from the app (they can contain your recorded samples)
+signly-data-*.json
 asl-coach-data-*.json
 
 # Logs

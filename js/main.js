@@ -832,7 +832,7 @@ function runAccuracyTest() {
  */
 function exportData() {
   const today = new Date().toISOString().slice(0, 10);
-  downloadTextFile('asl-coach-data-' + today + '.json', makeExportJson(app.data));
+  downloadTextFile('signly-data-' + today + '.json', makeExportJson(app.data));
   byId('data-status').textContent = 'Exported ' + app.data.samples.length + ' samples and your progress. Check your Downloads folder.';
 }
 

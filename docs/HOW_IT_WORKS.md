@@ -1,4 +1,4 @@
-# How the ASL Fingerspelling Coach Works
+# How Signly Works
 
 This document explains the "brain" of the app in plain language, with small
 examples you can check with a calculator. If a judge asks "how does it

@@ -2,7 +2,7 @@
 <!--
   index.html
   ----------
-  The one and only web page of the ASL Fingerspelling Coach.
+  The one and only web page of Signly, an ASL fingerspelling coach.
   Every "screen" (Home, Alphabet, Learn, Spell, Challenge, Free Sign, Progress,
   Test & Data, Add Samples) is a <section> on this page. JavaScript shows one
   section at a time, so the app never needs to load another page (and works offline).
@@ -11,7 +11,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ASL Fingerspelling Coach</title>
+  <title>Signly · Learn ASL fingerspelling</title>
+  <meta name="description" content="Signly: learn the ASL alphabet with a coach that watches your hand through your webcam. Free, private, and works offline.">
   <!-- An empty icon, so the browser doesn't ask the server for favicon.ico (and log a 404). -->
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/style.css">
@@ -52,7 +53,7 @@
     <div class="topbar-inner">
       <button type="button" class="brand" data-screen="home" aria-label="Go to home screen (Esc)">
         <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-hand"></use></svg></span>
-        <span class="brand-text">ASL Coach<small>Fingerspelling</small></span>
+        <span class="brand-text">Signly<small>ASL fingerspelling</small></span>
       </button>
       <nav class="nav" aria-label="Screens">
         <button type="button" data-screen="alphabet" title="Keyboard shortcut: 1"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg><span>Alphabet</span></button>
@@ -712,7 +713,7 @@
   </main>
 
   <footer class="site-footer">
-    <p><strong>ASL Fingerspelling Coach</strong> · Runs entirely offline in your browser · Hand tracking by
+    <p><strong>Signly</strong> · ASL fingerspelling coach · Runs entirely in your browser · Hand tracking by
       Google MediaPipe · Real-signer data and photos from two CC BY 4.0 datasets (credits on Test &amp; Data)</p>
   </footer>
 </body>

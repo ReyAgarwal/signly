@@ -25,7 +25,7 @@ import time
 import urllib.request
 import zipfile
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (asl-coach dataset tool)"}
+HEADERS = {"User-Agent": "Mozilla/5.0 (signly dataset tool)"}
 
 
 class RemoteFile(io.RawIOBase):
