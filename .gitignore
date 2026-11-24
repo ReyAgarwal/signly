@@ -14,3 +14,8 @@ asl-coach-data-*.json
 
 # Logs
 *.log
+
+# Dataset photos and working files used by the tools/ scripts (not needed by the app)
+tools/photos/
+tools/*-wanted.json
+tools/landmarks*.json

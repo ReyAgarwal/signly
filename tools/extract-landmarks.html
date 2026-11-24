@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--
+  extract-landmarks.html
+  ----------------------
+  Runs MediaPipe Hand Landmarker (the same offline copy the app uses) on a
+  folder of photos and saves the 21 hand points of each one as JSON.
+
+  How to use:
+    1. Put the photos in tools/photos/ and a list of their file names in tools/photos.json.
+    2. Start the server from the project folder (python3 serve.py).
+    3. Open http://localhost:8000/tools/extract-landmarks.html and press Start.
+    4. Press "Save results", then run tools/build-reference.mjs on the saved file.
+
+  Many dataset photos are tight close-ups, which MediaPipe's palm detector
+  handles badly. So each photo is tried with a few different gray borders
+  and confidence levels, and the first one that finds a hand is kept.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Extract hand landmarks</title>
+  <link rel="icon" href="data:,">
+  <style>body { font: 18px system-ui; margin: 24px; } button { font: inherit; padding: 8px 16px; }</style>
+</head>
+<body>
+  <h1>Extract hand landmarks from photos</h1>
+  <p id="status">Press Start.</p>
+  <button type="button" id="start">Start</button>
+  <button type="button" id="save" disabled>Save results</button>
+  <script type="module">
+    import { FilesetResolver, HandLandmarker } from '../vendor/mediapipe/vision_bundle.mjs';
+
+    /** [border in pixels, minimum confidence] to try, in order. */
+    const ATTEMPTS = [[100, 0.3], [300, 0.2], [0, 0.3], [450, 0.2]];
+    const trackers = {};
+    let results = [];
+
+    /**
+     * Gets (or creates) a hand tracker with a given confidence threshold.
+     * @param {number} confidence - Minimum detection confidence (0 to 1).
+     * @returns {Promise<HandLandmarker>} The tracker.
+     */
+    async function trackerFor(confidence) {
+      if (!trackers[confidence]) {
+        const vision = await FilesetResolver.forVisionTasks(new URL('../vendor/mediapipe/wasm', import.meta.url).href);
+        trackers[confidence] = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: { modelAssetPath: new URL('../models/hand_landmarker.task', import.meta.url).href, delegate: 'CPU' },
+          runningMode: 'IMAGE',
+          numHands: 1,
+          minHandDetectionConfidence: confidence,
+          minHandPresenceConfidence: confidence,
+        });
+      }
+      return trackers[confidence];
+    }
+
+    /**
+     * Loads a photo.
+     * @param {string} src - Its address.
+     * @returns {Promise<HTMLImageElement>} The loaded image.
+     */
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = src;
+      });
+    }
+
+    /**
+     * Finds the hand in one photo, trying several borders until one works.
+     * @param {string} file - The photo's file name inside tools/photos/.
+     * @param {HTMLCanvasElement} canvas - A scratch canvas to draw on.
+     * @returns {Promise<Object>} {file, found, hand, w, h, lm} (lm = 21 [x, y, z] points).
+     */
+    async function extractOne(file, canvas) {
+      const context = canvas.getContext('2d');
+      const image = await loadImage('photos/' + file);
+      for (const [border, confidence] of ATTEMPTS) {
+        canvas.width = image.width + 2 * border;
+        canvas.height = image.height + 2 * border;
+        context.fillStyle = '#808080';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, border, border);
+        const result = (await trackerFor(confidence)).detect(canvas);
+        if (result.landmarks.length > 0) {
+          return {
+            file, found: true, hand: result.handedness[0][0].categoryName, w: canvas.width, h: canvas.height,
+            lm: result.landmarks[0].map((p) => [+p.x.toFixed(5), +p.y.toFixed(5), +p.z.toFixed(5)]),
+          };
+        }
+      }
+      return { file, found: false };
+    }
+
+    document.getElementById('start').addEventListener('click', async () => {
+      const files = await (await fetch('photos.json')).json();
+      const canvas = document.createElement('canvas');
+      results = [];
+      for (const file of files) {
+        results.push(await extractOne(file, canvas));
+        if (results.length % 100 === 0) {
+          document.getElementById('status').textContent = results.length + ' of ' + files.length + ' photos done...';
+        }
+      }
+      const found = results.filter((r) => r.found).length;
+      document.getElementById('status').textContent = 'Done: found a hand in ' + found + ' of ' + files.length + ' photos.';
+      document.getElementById('save').disabled = false;
+    });
+
+    document.getElementById('save').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob([JSON.stringify(results)], { type: 'application/json' }));
+      link.download = 'landmarks.json';
+      link.click();
+    });
+  </script>
+</body>
+</html>
