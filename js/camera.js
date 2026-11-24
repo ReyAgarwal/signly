@@ -2,7 +2,7 @@
  * camera.js
  * ---------
  * Everything about "seeing" the hand:
- *   1. Turning on the laptop webcam (with friendly messages if it fails).
+ *   1. Turning the laptop webcam on (with friendly messages if it fails) and off.
  *   2. Loading MediaPipe's Hand Landmarker from our own /vendor and /models
  *      folders (so it works with no internet).
  *   3. Asking MediaPipe for the 21 hand points in the current video frame.
@@ -65,6 +65,31 @@ export async function startCamera(video) {
   video.srcObject = stream;
   await video.play();
   return stream;
+}
+
+/**
+ * Turns the webcam off, so the camera light goes out. We do this whenever
+ * the user leaves a camera screen: no one should be "watched" on the Home page.
+ * @param {HTMLVideoElement} video - The video element showing the camera.
+ * @returns {void}
+ */
+export function stopCamera(video) {
+  stopStream(video.srcObject);
+  video.srcObject = null;
+}
+
+/**
+ * Stops one camera stream. Stopping every track releases the camera (and its light).
+ * @param {MediaStream|null} stream - The stream from startCamera (or null).
+ * @returns {void}
+ */
+export function stopStream(stream) {
+  if (!stream) {
+    return;
+  }
+  for (const track of stream.getTracks()) {
+    track.stop();
+  }
 }
 
 /**

@@ -1,250 +1,318 @@
 /**
  * spellMode.js
  * ------------
- * The Spell-a-Word screen. The game RULES live in games.js; this file
- * connects those rules to the camera and the web page.
+ * The Spell screen: type any word or sentence, and the coach teaches you
+ * how to fingerspell it, one letter at a time.
+ *
+ *   1. phrase.js turns the text into letters ("Hi you" -> H I · Y O U).
+ *   2. For each letter, we show its diagram, tip, and "watch out" note.
+ *   3. The camera checks your sign (k-NN + smoothing, like Learn mode) and
+ *      gives finger hints. Sign it correctly and it moves to the next letter.
+ *   4. J and Z need movement, which the coach can't check yet, so they get
+ *      written instructions and you press Skip when you've practiced them.
  */
 
-import { LETTER_TIPS } from '../letters.js';
-import { LetterSmoother } from '../smoothing.js';
-import {
-  chooseGameWords, createSpellGame, currentWord, currentTargetLetter,
-  submitLetter, goToNextWord, timeLeftMs, isGameOver, GAME_DURATION_MS,
-} from '../games.js';
+import { LETTER_TIPS, LETTER_MIXUPS } from '../letters.js';
+import { parsePhrase, MOTION_LETTER_TIPS } from '../phrase.js';
+import { LetterSmoother, HintSmoother } from '../smoothing.js';
+import { findFingerToFix, hintMessage } from '../hints.js';
 import { renderHandDiagram } from '../diagram.js';
-import { byId, makeElement, setMeter, showSuccessBurst } from '../ui.js';
+import { byId, makeElement, setMeter, showSuccessBurst, formatPercent } from '../ui.js';
 
-/** After pressing Start, give the player this long to get their hand ready. */
-const GET_READY_MS = 1500;
+/** After moving to a new letter, give the user this long to change handshape. */
+const GET_READY_MS = 1000;
+
+/** Pause after a correct letter (so the user sees the green tile) before moving on. */
+const NEXT_LETTER_DELAY_MS = 700;
+
+/** How long a "that looked like X" message stays before finger hints return. */
+const WRONG_MESSAGE_MS = 1500;
+
+/** Starting handshape to draw for the two motion letters. */
+const MOTION_START_SHAPE = { J: 'I', Z: 'D' };
 
 /**
- * Creates the Spell-a-Word mode.
+ * Creates the Spell mode.
  * @param {Object} app - Shared app helpers and data (see main.js).
  * @returns {{enter:function, exit:function, onFrame:function, handleShortcut:function}} The mode.
  */
 export function createSpellMode(app) {
   const smoother = new LetterSmoother();
-  let game = null;
+  const hints = new HintSmoother();
+  let steps = [];
+  let progress = []; // one entry per step: 'todo', 'done', or 'skipped'
+  let position = 0;
+  let finished = false;
+  let waitingToAdvance = false;
   let getReadyUntilMs = 0;
+  let advanceTimer = null;
+  let shownDiagramKey = '';
+  let keepMessageUntilMs = 0;
 
-  const startButton = byId('spell-start');
-  const skipButton = byId('spell-skip');
-  const feedback = byId('spell-feedback');
-  const pictureBox = byId('spell-picture-hints');
+  const input = byId('spell-input');
+  const hintText = byId('spell-hint');
+  const seeingText = byId('spell-seeing');
   const diagram = byId('spell-diagram');
 
   /**
-   * Shows a feedback message in green (good), red (bad), or normal.
+   * Shows a message in the hint area.
    * @param {string} text - The message.
-   * @param {''|'good'|'bad'} kind - The color style.
+   * @param {boolean} isGood - True for green (encouraging), false for red (fix something).
    * @returns {void}
    */
-  function say(text, kind = '') {
-    feedback.textContent = text;
-    feedback.className = 'feedback ' + kind;
+  function setHint(text, isGood) {
+    hintText.textContent = text;
+    hintText.className = isGood ? 'hint good' : 'hint';
   }
 
   /**
-   * Draws the current word as letter boxes: done (green), current (blue), to-do.
-   * @param {boolean} shakeCurrent - True to shake the current box (wrong letter).
+   * Like setHint, but doesn't cover up a recent "that looked like X" message.
+   * @param {string} text - The message.
+   * @param {boolean} isGood - True for green, false for red.
+   * @param {number} nowMs - performance.now() time.
    * @returns {void}
    */
-  function renderWord(shakeCurrent = false) {
-    const wordBox = byId('spell-word');
-    wordBox.replaceChildren();
-    if (!game) {
-      return;
+  function setLiveHint(text, isGood, nowMs) {
+    if (nowMs >= keepMessageUntilMs) {
+      setHint(text, isGood);
     }
-    const word = currentWord(game);
-    for (let i = 0; i < word.length; i++) {
-      const box = makeElement('span', 'spell-letter', word[i]);
-      if (i < game.letterIndex) {
-        box.classList.add('done');
-      } else if (i === game.letterIndex) {
-        box.classList.add('current');
-        if (shakeCurrent) {
-          box.classList.add('wrong');
-        }
+  }
+
+  /**
+   * Draws the diagram for the current letter, only if something changed.
+   * @param {string|null} highlightFinger - Finger to draw in red, or null.
+   * @returns {void}
+   */
+  function showDiagram(highlightFinger) {
+    const step = steps[position];
+    const shape = step.kind === 'motion' ? MOTION_START_SHAPE[step.letter] : step.letter;
+    const key = shape + '|' + highlightFinger + '|' + app.settings.flipDiagrams;
+    if (key !== shownDiagramKey) {
+      shownDiagramKey = key;
+      renderHandDiagram(diagram, shape, { flipX: app.settings.flipDiagrams, highlightFinger });
+    }
+  }
+
+  /**
+   * Draws the whole phrase as small tiles, grouped by word.
+   * @returns {void}
+   */
+  function renderPhrase() {
+    const container = byId('spell-phrase');
+    container.replaceChildren();
+    let wordBox = null;
+    let currentWordIndex = -1;
+    steps.forEach((step, index) => {
+      if (step.wordIndex !== currentWordIndex) {
+        currentWordIndex = step.wordIndex;
+        wordBox = makeElement('span', 'phrase-word');
+        container.append(wordBox);
       }
-      wordBox.append(box);
-    }
-    const target = currentTargetLetter(game);
-    byId('spell-target-tip').textContent = 'Next: ' + target + '. ' + LETTER_TIPS[target];
-    showPictureHint(target);
+      const tile = makeElement('span', 'phrase-letter', step.letter);
+      if (progress[index] !== 'todo') {
+        tile.classList.add(progress[index]);
+      }
+      if (step.kind === 'motion') {
+        tile.classList.add('motion');
+      }
+      if (index === position && !finished) {
+        tile.classList.add('current');
+      }
+      wordBox.append(tile);
+    });
   }
 
   /**
-   * Shows a small diagram of the letter to sign next (if picture hints are on).
-   * @param {string|null} letter - The next letter, or null to hide the picture.
+   * Shows everything for the current letter: big letter, diagram, tips.
    * @returns {void}
    */
-  function showPictureHint(letter) {
-    const show = letter !== null && app.settings.spellPictureHints;
-    // <svg> elements don't support ".hidden = true" like HTML elements do,
-    // so we add or remove the hidden attribute directly.
-    diagram.toggleAttribute('hidden', !show);
-    if (show) {
-      renderHandDiagram(diagram, letter, { flipX: app.settings.flipDiagrams });
-    }
-  }
+  function renderCurrentLetter() {
+    const step = steps[position];
+    byId('spell-current-letter').textContent = step.letter;
+    byId('spell-step').textContent = 'Letter ' + (position + 1) + ' of ' + steps.length;
+    shownDiagramKey = '';
+    showDiagram(null);
+    diagram.nextElementSibling.textContent = step.kind === 'motion' ? 'Starting handshape' : 'How to make it';
 
-  /**
-   * Updates the timer, score, and best-score numbers.
-   * @param {number} nowMs - Current performance.now() time.
-   * @returns {void}
-   */
-  function renderScoreboard(nowMs) {
-    const secondsLeft = game ? Math.ceil(timeLeftMs(game, nowMs) / 1000) : GAME_DURATION_MS / 1000;
-    byId('spell-timer').textContent = String(secondsLeft);
-    byId('spell-score').textContent = String(game ? game.score : 0);
-    byId('spell-best').textContent = String(app.data.bestSpellScore);
-  }
-
-  /**
-   * Starts a new game with words the user can actually spell.
-   * @returns {void}
-   */
-  function startGame() {
-    const known = app.knownLetters();
-    if (known.length === 0) {
-      say('The coach has no reference hands loaded. Reload the page (see the message at the top).', 'bad');
+    if (step.kind === 'motion') {
+      byId('spell-tip').textContent = MOTION_LETTER_TIPS[step.letter];
+      byId('spell-mixup').textContent = '';
+      setHint(step.letter + ' is signed with a movement, so the coach can\'t check it yet. Practice it, then press Skip (→).', true);
       return;
     }
-    if (!app.isTrackerReady()) {
-      say('The camera is not ready yet. Wait for the video to appear, then press Start.', 'bad');
-      return;
-    }
+    byId('spell-tip').textContent = LETTER_TIPS[step.letter];
+    byId('spell-mixup').textContent = LETTER_MIXUPS[step.letter];
+    setHint('Make the letter ' + step.letter + ' and hold it steady.', true);
+  }
 
-    const { words, usingPracticeWords } = chooseGameWords(known);
-    game = createSpellGame(words, performance.now());
+  /**
+   * Moves to a letter of the phrase.
+   * @param {number} index - Which letter (0 = first).
+   * @returns {void}
+   */
+  function goToStep(index) {
+    clearTimeout(advanceTimer);
+    waitingToAdvance = false;
+    finished = false;
+    position = Math.max(0, Math.min(steps.length - 1, index));
+    // Going back to a letter means practicing it again.
+    progress[position] = 'todo';
     smoother.reset();
+    hints.reset();
+    // Without this pause, the shape the hand is already holding could lock in right away.
     getReadyUntilMs = performance.now() + GET_READY_MS;
-    startButton.disabled = true;
-    skipButton.disabled = false;
-    if (usingPracticeWords) {
-      say('Using practice letter combos, because no real words can be made from the letters the coach knows.');
-    } else {
-      say('Go! Sign the blue letter and hold it steady.');
-    }
-    renderWord();
-    renderScoreboard(performance.now());
+    setMeter(byId('spell-hold-bar'), 0);
+    seeingText.textContent = '';
+    renderPhrase();
+    renderCurrentLetter();
   }
 
   /**
-   * Ends the game, saves a new best score, and shows the results.
+   * Marks the current letter as done or skipped, then moves on (or finishes).
+   * @param {'done'|'skipped'} result - How the letter ended.
    * @returns {void}
    */
-  function endGame() {
-    if (!game) {
+  function completeCurrentLetter(result) {
+    progress[position] = result;
+    if (position >= steps.length - 1) {
+      finishPhrase();
       return;
     }
-    const finalScore = game.score;
-    let message = 'Time\'s up! You scored ' + finalScore + ' points: ' + game.wordsCompleted + ' words, ' + game.lettersCorrect + ' correct letters.';
-    if (finalScore > app.data.bestSpellScore) {
-      app.setBestSpellScore(finalScore);
-      message += ' New best score!';
-    }
-    game = null;
-    startButton.disabled = false;
-    startButton.textContent = '▶ Play again';
-    skipButton.disabled = true;
-    setMeter(byId('spell-hold-bar'), 0);
-    byId('spell-target-tip').textContent = '';
-    showPictureHint(null);
-    renderWord();
-    say(message, 'good');
+    goToStep(position + 1);
   }
 
   /**
-   * Handles a letter the smoother locked in.
-   * @param {string} letter - The locked-in letter.
-   * @param {number} nowMs - Current performance.now() time.
+   * Shows the "all done" state.
+   * @returns {void}
+   */
+  function finishPhrase() {
+    finished = true;
+    waitingToAdvance = false;
+    clearTimeout(advanceTimer);
+    renderPhrase();
+    const signed = progress.filter((p) => p === 'done').length;
+    byId('spell-current-letter').textContent = '✓';
+    byId('spell-step').textContent = 'Finished';
+    setMeter(byId('spell-hold-bar'), 0);
+    setHint('Done! You signed ' + signed + ' of ' + steps.length + ' letters. Type a new phrase, or press Start over.', true);
+    showSuccessBurst('You spelled it!');
+  }
+
+  /**
+   * Starts teaching a new phrase.
+   * @param {string} text - What the user typed.
+   * @returns {void}
+   */
+  function startLesson(text) {
+    const parsed = parsePhrase(text);
+    const note = byId('spell-form-note');
+    if (parsed.steps.length === 0) {
+      note.textContent = 'Type at least one letter (A to Z).';
+      return;
+    }
+    const notes = [];
+    if (parsed.skipped.length > 0) {
+      notes.push('Skipped ' + parsed.skipped.join(' ') + ' (numbers and punctuation have their own signs).');
+    }
+    if (parsed.tooLong) {
+      notes.push('Only the first 60 characters are used.');
+    }
+    note.textContent = notes.join(' ');
+
+    steps = parsed.steps;
+    progress = steps.map(() => 'todo');
+    byId('spell-empty').hidden = true;
+    byId('spell-lesson').hidden = false;
+    // Take the cursor out of the text box so the arrow-key shortcuts work.
+    input.blur();
+    goToStep(0);
+  }
+
+  /**
+   * Handles a letter that just locked in: move on if right, coach if wrong.
+   * @param {string} lockedLetter - The letter the coach locked in.
    * @param {Object} hand - The hand at that moment (used for "keep learning").
    * @returns {void}
    */
-  function handleLock(letter, nowMs, hand) {
-    const result = submitLetter(game, letter, nowMs);
-    if (result.outcome === 'game-over') {
+  function handleLock(lockedLetter, hand) {
+    const target = steps[position].letter;
+    const correct = lockedLetter === target;
+    app.recordAttempt(target, correct, 'spell');
+    if (!correct) {
+      setHint('That looked like ' + lockedLetter + '. Check the picture and try again.', false);
+      keepMessageUntilMs = performance.now() + WRONG_MESSAGE_MS;
       return;
     }
-
-    // Progress is saved for the letter they were SUPPOSED to sign.
-    const correct = result.outcome !== 'wrong';
-    app.recordAttempt(result.expected, correct, 'spell');
-    if (correct) {
-      app.learnFrom(hand, result.expected, letter);
-    }
-
-    if (result.outcome === 'wrong') {
-      say('That looked like ' + letter + '. The next letter is ' + result.expected + '.', 'bad');
-      renderWord(true);
-      return;
-    }
-
-    // Double letter (the second O in "BOOK")? Then forget the recent frames,
-    // so continuing to hold O locks it in again. For any other next letter we
-    // do NOT reset: the smoother then won't re-lock the letter still being
-    // held, so a slow hand change isn't counted as a mistake.
-    if (currentTargetLetter(game) === letter) {
-      smoother.reset();
-    }
-    if (result.outcome === 'word-complete') {
-      showSuccessBurst('Word complete! +bonus');
-      say('Nice! You finished a word.', 'good');
-    } else {
-      say('Yes! ' + letter + ' is correct.', 'good');
-    }
-    renderWord();
+    app.learnFrom(hand, target, lockedLetter);
+    progress[position] = 'done';
+    renderPhrase();
+    setHint('Yes! That\'s ' + target + '.', true);
+    waitingToAdvance = true;
+    advanceTimer = setTimeout(() => completeCurrentLetter('done'), NEXT_LETTER_DELAY_MS);
   }
 
-  /**
-   * Skips to the next word (does nothing if no game is running).
-   * @returns {void}
-   */
-  function skipWord() {
-    if (!game) {
-      return;
-    }
-    goToNextWord(game);
-    smoother.reset();
-    say('Skipped. Here\'s a new word.');
-    renderWord();
+  byId('spell-form').addEventListener('submit', (event) => {
+    // Stop the browser from reloading the page (the default for forms).
+    event.preventDefault();
+    startLesson(input.value);
+  });
+  for (const chip of document.querySelectorAll('#panel-spell [data-phrase]')) {
+    chip.addEventListener('click', () => {
+      input.value = chip.dataset.phrase;
+      startLesson(chip.dataset.phrase);
+    });
   }
-
-  startButton.addEventListener('click', startGame);
-  skipButton.addEventListener('click', skipWord);
-  pictureBox.addEventListener('change', () => {
-    app.setSetting('spellPictureHints', pictureBox.checked);
-    showPictureHint(game ? currentTargetLetter(game) : null);
+  byId('spell-skip').addEventListener('click', () => {
+    if (steps.length > 0 && !finished) {
+      completeCurrentLetter('skipped');
+    }
+  });
+  byId('spell-back').addEventListener('click', () => goToStep(position - 1));
+  byId('spell-restart').addEventListener('click', () => {
+    progress = steps.map(() => 'todo');
+    goToStep(0);
   });
 
   return {
     /** Called when this screen opens. @returns {void} */
     enter() {
-      pictureBox.checked = app.settings.spellPictureHints;
-      renderScoreboard(performance.now());
-      if (app.pool.length === 0) {
-        say('The coach has no reference hands loaded. Reload the page (see the message at the top).', 'bad');
-      } else if (!game) {
-        say('Press Start. You have 60 seconds to spell as many words as you can.');
+      if (steps.length === 0) {
+        byId('spell-empty').hidden = false;
+        byId('spell-lesson').hidden = true;
+        input.focus();
+        return;
+      }
+      shownDiagramKey = '';
+      renderPhrase();
+      if (!finished) {
+        renderCurrentLetter();
       }
     },
 
-    /** Called when leaving this screen: the game ends. @returns {void} */
+    /** Called when leaving this screen. @returns {void} */
     exit() {
-      endGame();
+      clearTimeout(advanceTimer);
+      if (waitingToAdvance) {
+        completeCurrentLetter('done');
+      }
+      smoother.reset();
     },
 
     /**
      * Handles a keyboard shortcut (see keyboard.js).
-     * @param {string} action - "start" or "skip".
+     * @param {string} action - "next-letter", "previous-letter", or "focus-input".
      * @returns {void}
      */
     handleShortcut(action) {
-      if (action === 'start' && !game) {
-        startGame();
-      } else if (action === 'skip') {
-        skipWord();
+      if (action === 'focus-input') {
+        input.focus();
+        input.select();
+      } else if (steps.length === 0) {
+        return;
+      } else if (action === 'next-letter' && !finished) {
+        completeCurrentLetter(progress[position] === 'done' ? 'done' : 'skipped');
+      } else if (action === 'previous-letter') {
+        goToStep(finished ? steps.length - 1 : position - 1);
       }
     },
 
@@ -252,28 +320,54 @@ export function createSpellMode(app) {
      * Called for every video frame.
      * @param {Object|null} hand - The processed hand, or null if none is visible.
      * @param {number} nowMs - performance.now() time of this frame.
-     * @returns {{highlightFinger:null}} No finger highlight in this game.
+     * @returns {{highlightFinger:string|null}} The finger to draw in red.
      */
     onFrame(hand, nowMs) {
-      if (!game) {
+      if (steps.length === 0 || finished || waitingToAdvance) {
         return { highlightFinger: null };
       }
-      if (isGameOver(game, nowMs)) {
-        endGame();
+      const step = steps[position];
+      const template = app.templates[step.letter];
+      if (step.kind === 'motion' || !template) {
         return { highlightFinger: null };
       }
 
-      renderScoreboard(nowMs);
       // During the get-ready pause we keep clearing the smoother, so nothing can lock in.
       if (nowMs < getReadyUntilMs) {
         smoother.reset();
       }
-      const { smooth } = app.recognize(hand, smoother, nowMs);
-      setMeter(byId('spell-hold-bar'), smooth.holdProgress);
-      if (smooth.lockedLetter) {
-        handleLock(smooth.lockedLetter, nowMs, hand);
+      const { guess, smooth } = app.recognize(hand, smoother, nowMs);
+      setMeter(byId('spell-hold-bar'), smooth.stableLetter === step.letter ? smooth.holdProgress : 0);
+
+      if (!hand || !guess) {
+        seeingText.textContent = '';
+        setLiveHint('Show your hand to the camera.', false, nowMs);
+        showDiagram(null);
+        return { highlightFinger: null };
       }
-      return { highlightFinger: null };
+      seeingText.textContent = 'I see: ' + guess.letter + ' (' + formatPercent(guess.confidence) + ' confident)';
+
+      if (smooth.lockedLetter) {
+        handleLock(smooth.lockedLetter, hand);
+        if (waitingToAdvance) {
+          showDiagram(null);
+          return { highlightFinger: null };
+        }
+      }
+
+      if (guess.letter === step.letter && guess.confidence >= app.minConfidence) {
+        hints.reset();
+        setLiveHint('Looks like ' + step.letter + '! Hold it steady...', true, nowMs);
+        showDiagram(null);
+        return { highlightFinger: null };
+      }
+
+      // Otherwise compare finger bends with the real signers' template and coach one finger.
+      const fix = hints.update(findFingerToFix(hand.bends, template.bends));
+      setLiveHint(hintMessage(fix), false, nowMs);
+      const highlightFinger = fix ? fix.finger : null;
+      showDiagram(highlightFinger);
+      return { highlightFinger };
     },
   };
 }

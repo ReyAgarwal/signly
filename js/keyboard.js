@@ -4,12 +4,13 @@
  * Keyboard shortcuts, so you can practice without reaching for the mouse
  * (your hands are busy signing!).
  *
- *   Anywhere:     1-7 = open a screen, Esc = Home
+ *   Anywhere:     1-8 = open a screen, Esc = Home
  *   Alphabet:     type a letter = practice that letter in Learn
- *   Add Samples:  Space or Enter = record, ← → = change letter, type a letter = pick it
  *   Learn:        Enter or → = next letter, ← = previous letter, type a letter = pick it
+ *   Spell:        / = type a new phrase, → = skip this letter, ← = go back a letter
+ *   Challenge:    Enter = start / play again, → = skip word
  *   Free Sign:    Space = add a space, Backspace = delete, Delete = clear
- *   Spell:        Enter = start / play again, → = skip word
+ *   Add Samples:  Space or Enter = record, ← → = change letter, type a letter = pick it
  *
  * shortcutFor() only DECIDES what a key means (it returns an "action" name).
  * main.js and the modes actually DO the action. Keeping them apart makes this
@@ -23,10 +24,11 @@ export const SCREEN_NUMBER_KEYS = {
   1: 'alphabet',
   2: 'learn',
   3: 'spell',
-  4: 'free',
-  5: 'progress',
-  6: 'data',
-  7: 'record',
+  4: 'challenge',
+  5: 'free',
+  6: 'progress',
+  7: 'data',
+  8: 'record',
 };
 
 /** Shortcuts that only work on one screen: screen -> key -> action. */
@@ -34,7 +36,8 @@ const SCREEN_SHORTCUTS = {
   record: { ' ': 'record', Enter: 'record', ArrowRight: 'next-letter', ArrowLeft: 'previous-letter' },
   learn: { Enter: 'next-letter', ArrowRight: 'next-letter', ArrowLeft: 'previous-letter' },
   free: { ' ': 'space', Backspace: 'backspace', Delete: 'clear' },
-  spell: { Enter: 'start', ArrowRight: 'skip' },
+  spell: { '/': 'focus-input', ArrowRight: 'next-letter', ArrowLeft: 'previous-letter' },
+  challenge: { Enter: 'start', ArrowRight: 'skip' },
 };
 
 /** Screens where typing a letter key picks that letter. */

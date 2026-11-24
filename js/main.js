@@ -21,7 +21,7 @@
  * small helper functions, so modes don't each need to know about storage.
  */
 
-import { startCamera, createHandTracker, detectHand, friendlyCameraError } from './camera.js';
+import { startCamera, stopCamera, stopStream, createHandTracker, detectHand, friendlyCameraError } from './camera.js';
 import { normalizeHand, pointsToFeatures, featuresToPoints, shouldMirror } from './landmarks.js';
 import { classify, evaluateUnseenPeople } from './classifier.js';
 import { allFingerBends, buildAllTemplates } from './hints.js';
@@ -35,7 +35,7 @@ import {
 } from './storage.js';
 import {
   byId, showScreen, showBanner, hideBanner, setCameraStatus, renderProgress, renderAlphabetChart,
-  renderAccuracyReport, makeConfirmButton, downloadTextFile, CAMERA_SCREENS,
+  renderAccuracyReport, makeConfirmButton, downloadTextFile, renderHeroArt, CAMERA_SCREENS,
 } from './ui.js';
 import { shortcutFor } from './keyboard.js';
 import { drawLiveHand, clearCanvas, matchCanvasToVideo } from './draw.js';
@@ -43,6 +43,7 @@ import { createRecordMode } from './modes/recordMode.js';
 import { createFreeMode } from './modes/freeMode.js';
 import { createLearnMode } from './modes/learnMode.js';
 import { createSpellMode } from './modes/spellMode.js';
+import { createChallengeMode } from './modes/challengeMode.js';
 
 /** A guess counts only if at least 60% of the k neighbors agree (3 of 5). */
 const MIN_CONFIDENCE = 0.6;
@@ -78,7 +79,7 @@ const app = {
   deleteSamplesFor: deleteTeacherSamplesFor,
   recordAttempt: recordAttempt,
   learnFrom: learnFrom,
-  setBestSpellScore: setBestSpellScore,
+  setBestScore: setBestScore,
   recognize: recognize,
   masteredLetters: listMasteredLetters,
   setSetting: setSetting,
@@ -88,6 +89,9 @@ const app = {
 // ---------- Camera and tracker state ----------
 
 let cameraState = 'off'; // 'off', 'starting', 'ready', or 'error'
+// Goes up every time the camera is started or turned off. A start that
+// finishes after the user already left can tell it's out of date.
+let cameraRequest = 0;
 let trackerPromise = null;
 let tracker = null;
 let lastVideoTime = -1;
@@ -313,12 +317,13 @@ function learnFrom(hand, targetLetter, lockedLetter) {
 }
 
 /**
- * Saves a new best Spell-a-Word score.
+ * Saves a new best Challenge score for one difficulty.
+ * @param {string} difficulty - "easy", "medium", or "hard".
  * @param {number} score - The new best score.
  * @returns {void}
  */
-function setBestSpellScore(score) {
-  app.data.bestSpellScore = score;
+function setBestScore(difficulty, score) {
+  app.data.bestScores[difficulty] = score;
   persist();
 }
 
@@ -379,6 +384,33 @@ function loadTracker() {
 }
 
 /**
+ * Checks whether the camera should be on right now: a camera screen is
+ * open AND this browser tab is the one being looked at.
+ * @returns {boolean} True if the camera is needed.
+ */
+function cameraIsNeeded() {
+  return CAMERA_SCREENS.includes(currentScreen) && !document.hidden;
+}
+
+/**
+ * Turns the webcam off (the camera light goes out) when no camera screen
+ * is open. The hand tracker stays loaded, so turning back on is quick.
+ * @returns {void}
+ */
+function turnCameraOff() {
+  if (cameraState === 'off' || cameraState === 'error') {
+    return;
+  }
+  cameraRequest += 1;
+  stopCamera(byId('video'));
+  cameraState = 'off';
+  lastVideoTime = -1;
+  noHandMessageShowing = false;
+  setCameraStatus('');
+  clearCanvas(byId('overlay'));
+}
+
+/**
  * Starts the webcam and hand tracker if they aren't running yet.
  * Shows a friendly message on the video if anything goes wrong.
  * @returns {Promise<void>}
@@ -388,15 +420,25 @@ async function ensureCameraRunning() {
     return;
   }
   cameraState = 'starting';
+  cameraRequest += 1;
+  const request = cameraRequest;
   byId('camera-retry').hidden = true;
   setCameraStatus('Starting the camera... If Chrome asks for permission, click "Allow".');
 
+  let stream = null;
   try {
-    await startCamera(byId('video'));
+    stream = await startCamera(byId('video'));
   } catch (error) {
-    cameraState = 'error';
-    setCameraStatus(friendlyCameraError(error), true);
-    byId('camera-retry').hidden = false;
+    if (request === cameraRequest) {
+      cameraState = 'error';
+      setCameraStatus(friendlyCameraError(error), true);
+      byId('camera-retry').hidden = false;
+    }
+    return;
+  }
+  // The user may have left the camera screen while the camera was starting.
+  if (request !== cameraRequest || !cameraIsNeeded()) {
+    stopUnneededStream(stream, request);
     return;
   }
 
@@ -411,10 +453,34 @@ async function ensureCameraRunning() {
     byId('camera-retry').hidden = false;
     return;
   }
+  // ...or while the hand tracker was loading.
+  if (request !== cameraRequest || !cameraIsNeeded()) {
+    stopUnneededStream(stream, request);
+    return;
+  }
 
   cameraState = 'ready';
   lastHandSeenMs = performance.now();
   setCameraStatus('');
+}
+
+/**
+ * Stops a camera stream that finished starting after the user had already left.
+ * @param {MediaStream} stream - The stream that's no longer needed.
+ * @param {number} request - Which camera start it came from.
+ * @returns {void}
+ */
+function stopUnneededStream(stream, request) {
+  stopStream(stream);
+  const video = byId('video');
+  if (video.srcObject === stream) {
+    video.srcObject = null;
+  }
+  // Only change the state if no newer camera start has begun since.
+  if (request === cameraRequest) {
+    cameraState = 'off';
+    setCameraStatus('');
+  }
 }
 
 /**
@@ -493,16 +559,16 @@ function frameLoop() {
  * @returns {void}
  */
 function renderHome() {
+  renderHeroArt(byId('hero-art'));
   const status = byId('home-status');
   if (app.reference.length === 0) {
     status.textContent = 'The real-signer reference did not load, so the coach only knows samples added on the Add Samples screen.';
     return;
   }
   const { learned } = countBySource(app.data.samples);
-  let text = 'Ready! The coach knows all 24 static letters from ' + app.reference.length.toLocaleString()
-    + ' hands of real people signing. Start with the Alphabet, then practice in Learn.';
+  let text = '✓ Ready: compares you with ' + app.reference.length.toLocaleString() + ' hands of real signers';
   if (learned > 0) {
-    text += ' It has also learned from ' + learned + ' of your correct signs.';
+    text += ', plus ' + learned + ' of your own correct signs';
   }
   status.textContent = text;
 }
@@ -550,7 +616,8 @@ function goTo(screenName) {
     modes[screenName].enter();
     ensureCameraRunning();
   } else {
-    clearCanvas(byId('overlay'));
+    // No camera screen is open, so switch the webcam off (and its light).
+    turnCameraOff();
   }
   if (screenName === 'home') {
     renderHome();
@@ -559,7 +626,7 @@ function goTo(screenName) {
     renderAlphabet();
   }
   if (screenName === 'progress') {
-    renderProgress(app.data.attempts, app.data.bestSpellScore);
+    renderProgress(app.data.attempts, app.data.bestScores);
   }
   if (screenName === 'data') {
     renderDataSummary();
@@ -682,6 +749,14 @@ function setUpEventListeners() {
     });
   }
   window.addEventListener('hashchange', () => goTo(screenFromAddress()));
+  // Switching to another browser tab turns the camera off; coming back turns it on again.
+  document.addEventListener('visibilitychange', () => {
+    if (cameraIsNeeded()) {
+      ensureCameraRunning();
+    } else {
+      turnCameraOff();
+    }
+  });
 
   document.addEventListener('keydown', onKeyDown);
   byId('banner-close').addEventListener('click', hideBanner);
@@ -718,7 +793,7 @@ function setUpEventListeners() {
   makeConfirmButton(byId('progress-reset'), () => {
     app.data.attempts = [];
     persist();
-    renderProgress(app.data.attempts, app.data.bestSpellScore);
+    renderProgress(app.data.attempts, app.data.bestScores);
   });
 }
 
@@ -756,10 +831,11 @@ async function start() {
   rebuildKnowledge();
 
   modes = {
-    record: createRecordMode(app),
-    free: createFreeMode(app),
     learn: createLearnMode(app),
     spell: createSpellMode(app),
+    challenge: createChallengeMode(app),
+    free: createFreeMode(app),
+    record: createRecordMode(app),
   };
 
   setUpEventListeners();

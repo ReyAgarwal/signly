@@ -136,3 +136,49 @@ export class LetterSmoother {
     return vote.label;
   }
 }
+
+/** How many recent frames vote on which finger hint to show. */
+export const DEFAULT_HINT_WINDOW = 12;
+
+/**
+ * Keeps finger hints steady. Each frame might suggest a different finger
+ * to fix, so we show whichever suggestion won the most recent frames
+ * (the same majority-vote idea as LetterSmoother).
+ */
+export class HintSmoother {
+  /**
+   * Creates a hint smoother.
+   * @param {number} windowSize - How many recent frames vote.
+   */
+  constructor(windowSize = DEFAULT_HINT_WINDOW) {
+    this.windowSize = windowSize;
+    this.reset();
+  }
+
+  /**
+   * Forgets all recent hints.
+   * @returns {void}
+   */
+  reset() {
+    this.recentHints = [];
+  }
+
+  /**
+   * Adds this frame's hint and returns the steady one.
+   * @param {{finger:string, action:string}|null} fix - This frame's suggestion (from findFingerToFix).
+   * @returns {{finger:string, action:string}|null} The suggestion that won the vote.
+   */
+  update(fix) {
+    // Store each hint as text like "index|curl" so identical hints can be counted.
+    this.recentHints.push(fix ? fix.finger + '|' + fix.action : null);
+    if (this.recentHints.length > this.windowSize) {
+      this.recentHints.shift();
+    }
+    const winner = majorityVote(this.recentHints).label;
+    if (!winner) {
+      return null;
+    }
+    const [finger, action] = winner.split('|');
+    return { finger, action };
+  }
+}

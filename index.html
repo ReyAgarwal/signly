@@ -3,9 +3,9 @@
   index.html
   ----------
   The one and only web page of the ASL Fingerspelling Coach.
-  Every "screen" (Home, Alphabet, Record, Free Sign, Learn, Spell, Progress,
-  Test & Data) is a <section> on this page. JavaScript shows one section at a
-  time, so the app never needs to load another page (and works offline).
+  Every "screen" (Home, Alphabet, Learn, Spell, Challenge, Free Sign, Progress,
+  Test & Data, Add Samples) is a <section> on this page. JavaScript shows one
+  section at a time, so the app never needs to load another page (and works offline).
 -->
 <html lang="en">
 <head>
@@ -18,19 +18,51 @@
   <script type="module" src="js/main.js"></script>
 </head>
 <body>
+  <!-- Icons: simple line drawings defined once here and reused with <use href="#i-name">.
+       They're drawn by us (no icon library), so nothing is downloaded. -->
+  <svg class="icon-sprite" aria-hidden="true">
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6.5a1.5 1.5 0 0 1 3 0V11M10 10.5V4.5a1.5 1.5 0 0 1 3 0V10.5M13 10.5V5.5a1.5 1.5 0 0 1 3 0V11M16 11.5V8.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-.8a6 6 0 0 1-4.9-2.5L3.8 15a1.6 1.6 0 0 1 2.5-2l.7.8"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.8"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></symbol>
+    <symbol id="i-type" viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-7l-4 3v-3H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M7.5 14l2-6 2 6M8.2 12h2.6M14 9h3.5M14 12.5h3.5"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M9.5 2.5h5M12 2.5V6M18.5 6.5l1.5-1.5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 20.5h18M6 20.5v-6M11 20.5V8M16 20.5v-9M21 20.5V5"/></symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6.2L4.7 18.4A1.8 1.8 0 0 0 6.3 21h11.4a1.8 1.8 0 0 0 1.6-2.6L14 9.2V3M7.2 15h9.6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 20V8M7 13l5-5 5 5M4 4h16"/></symbol>
+    <symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/></symbol>
+    <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 5l10 7-10 7zM19 5v14"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7 14h10"/></symbol>
+  </svg>
+
   <header class="topbar">
-    <button type="button" class="brand" data-screen="home" aria-label="Go to home screen (Esc)">
-      <span aria-hidden="true">✋</span> ASL Fingerspelling Coach
-    </button>
-    <nav class="nav" aria-label="Modes">
-      <button type="button" data-screen="alphabet" title="Keyboard shortcut: 1">Alphabet</button>
-      <button type="button" data-screen="learn" title="Keyboard shortcut: 2">Learn</button>
-      <button type="button" data-screen="spell" title="Keyboard shortcut: 3">Spell</button>
-      <button type="button" data-screen="free" title="Keyboard shortcut: 4">Free Sign</button>
-      <button type="button" data-screen="progress" title="Keyboard shortcut: 5">Progress</button>
-      <button type="button" data-screen="data" title="Keyboard shortcut: 6">Test &amp; Data</button>
-      <button type="button" data-screen="record" title="Keyboard shortcut: 7">Add Samples</button>
-    </nav>
+    <div class="topbar-inner">
+      <button type="button" class="brand" data-screen="home" aria-label="Go to home screen (Esc)">
+        <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-hand"></use></svg></span>
+        <span class="brand-text">ASL Coach<small>Fingerspelling</small></span>
+      </button>
+      <nav class="nav" aria-label="Screens">
+        <button type="button" data-screen="alphabet" title="Keyboard shortcut: 1"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg><span>Alphabet</span></button>
+        <button type="button" data-screen="learn" title="Keyboard shortcut: 2"><svg class="icon" aria-hidden="true"><use href="#i-target"></use></svg><span>Learn</span></button>
+        <button type="button" data-screen="spell" title="Keyboard shortcut: 3"><svg class="icon" aria-hidden="true"><use href="#i-type"></use></svg><span>Spell</span></button>
+        <button type="button" data-screen="challenge" title="Keyboard shortcut: 4"><svg class="icon" aria-hidden="true"><use href="#i-timer"></use></svg><span>Challenge</span></button>
+        <button type="button" data-screen="free" title="Keyboard shortcut: 5"><svg class="icon" aria-hidden="true"><use href="#i-eye"></use></svg><span>Free Sign</span></button>
+        <span class="nav-divider" aria-hidden="true"></span>
+        <button type="button" data-screen="progress" title="Keyboard shortcut: 6"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg><span>Progress</span></button>
+        <button type="button" data-screen="data" title="Keyboard shortcut: 7"><svg class="icon" aria-hidden="true"><use href="#i-flask"></use></svg><span>Test &amp; Data</span></button>
+        <button type="button" data-screen="record" title="Keyboard shortcut: 8"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg><span>Add Samples</span></button>
+      </nav>
+    </div>
   </header>
 
   <!-- Shown only if the JavaScript never starts (main.js removes it). The most
@@ -48,312 +80,454 @@
   <main>
     <!-- ======================= HOME ======================= -->
     <section id="screen-home" class="screen" aria-labelledby="home-title">
-      <h1 id="home-title">Learn to fingerspell in ASL</h1>
-      <p class="lead">
-        Hold your hand up to the webcam. The coach compares your hand with thousands of
-        hands of real people signing, recognizes the letter, tells you which finger to fix,
-        and tracks your progress. Everything runs on this laptop: no internet needed, and
-        no video ever leaves the computer.
-      </p>
-
-      <p id="home-status" class="status-box"></p>
-
-      <div class="tiles">
-        <button type="button" class="tile" data-screen="alphabet">
-          <span class="tile-icon" aria-hidden="true">🔠</span>
-          <span class="tile-title">1. Alphabet</span>
-          <span class="tile-text">Start here: a picture of every handshape, with tips and common mix-ups.</span>
-        </button>
-        <button type="button" class="tile" data-screen="learn">
-          <span class="tile-icon" aria-hidden="true">🎯</span>
-          <span class="tile-title">2. Learn</span>
-          <span class="tile-text">Copy the picture, get finger hints, and move letter to letter with Enter.</span>
-        </button>
-        <button type="button" class="tile" data-screen="spell">
-          <span class="tile-icon" aria-hidden="true">⏱</span>
-          <span class="tile-title">3. Spell-a-Word</span>
-          <span class="tile-text">Spell words letter by letter before the timer runs out.</span>
-        </button>
-        <button type="button" class="tile" data-screen="free">
-          <span class="tile-icon" aria-hidden="true">🔤</span>
-          <span class="tile-title">4. Free Sign</span>
-          <span class="tile-text">Sign anything and see the letter, the confidence, and the k-NN votes live.</span>
-        </button>
-        <button type="button" class="tile" data-screen="progress">
-          <span class="tile-icon" aria-hidden="true">📈</span>
-          <span class="tile-title">5. Progress</span>
-          <span class="tile-text">See your accuracy for every letter over time.</span>
-        </button>
-        <button type="button" class="tile" data-screen="data">
-          <span class="tile-icon" aria-hidden="true">🧪</span>
-          <span class="tile-title">6. Test &amp; Data</span>
-          <span class="tile-text">How accurate is the coach? What does it know? Backups and "keep learning".</span>
-        </button>
-        <button type="button" class="tile" data-screen="record">
-          <span class="tile-icon" aria-hidden="true">⏺</span>
-          <span class="tile-title">7. Add Samples (teachers)</span>
-          <span class="tile-text">Optional: a fluent signer can add extra correct examples.</span>
-        </button>
+      <div class="hero">
+        <div class="hero-text">
+          <p class="eyebrow light"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg> Free · Works offline · Video never leaves this laptop</p>
+          <h1 id="home-title">Learn to fingerspell in ASL, with a coach that watches your hand</h1>
+          <p class="hero-sub">
+            Sign to your webcam. The coach compares your hand with thousands of hands of
+            real people signing, tells you exactly which finger to fix, and tracks your progress.
+          </p>
+          <div class="hero-actions">
+            <button type="button" class="button primary large on-dark" data-screen="alphabet">Start with the alphabet <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+            <button type="button" class="button ghost large" data-screen="spell">Spell a word</button>
+          </div>
+          <p id="home-status" class="status-chip"></p>
+        </div>
+        <div id="hero-art" class="hero-art" aria-hidden="true"></div>
       </div>
 
-      <h2>Keyboard shortcuts</h2>
-      <p>Your hands are busy signing, so most things work from the keyboard.</p>
-      <table class="data-table shortcuts">
-        <thead><tr><th scope="col">Where</th><th scope="col">Keys</th></tr></thead>
-        <tbody>
-          <tr><td>Anywhere</td><td><kbd>1</kbd>–<kbd>7</kbd> open a screen (same order as the menu) · <kbd>Esc</kbd> Home</td></tr>
-          <tr><td>Alphabet</td><td>Type a letter to practice it in Learn</td></tr>
-          <tr><td>Learn</td><td><kbd>Enter</kbd> or <kbd>→</kbd> next letter · <kbd>←</kbd> previous letter · type a letter to jump to it</td></tr>
-          <tr><td>Spell</td><td><kbd>Enter</kbd> start / play again · <kbd>→</kbd> skip word</td></tr>
-          <tr><td>Free Sign</td><td><kbd>Space</kbd> add a space · <kbd>Backspace</kbd> delete · <kbd>Delete</kbd> clear</td></tr>
-          <tr><td>Add Samples</td><td><kbd>Space</kbd> or <kbd>Enter</kbd> record · <kbd>←</kbd> <kbd>→</kbd> change letter · type a letter to pick it</td></tr>
-        </tbody>
-      </table>
+      <section class="home-section" aria-labelledby="how-title">
+        <h2 id="how-title" class="section-title">How it works</h2>
+        <ol class="steps">
+          <li class="step">
+            <span class="step-number">1</span>
+            <div><h3>See the handshape</h3><p>Every letter has a diagram, a tip, and a warning about the letter it's most often mixed up with.</p></div>
+          </li>
+          <li class="step">
+            <span class="step-number">2</span>
+            <div><h3>Sign to the camera</h3><p>MediaPipe finds 21 points on your hand. Hold the sign steady for half a second to lock it in.</p></div>
+          </li>
+          <li class="step">
+            <span class="step-number">3</span>
+            <div><h3>Get instant feedback</h3><p>The coach compares you with ~6,000 real signers and turns the finger you need to fix red.</p></div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="home-section" aria-labelledby="modes-title">
+        <h2 id="modes-title" class="section-title">Choose a mode</h2>
+        <div class="mode-grid">
+          <button type="button" class="mode-card" data-screen="alphabet">
+            <span class="mode-icon tone-blue"><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg></span>
+            <span class="mode-title">Alphabet <kbd>1</kbd></span>
+            <span class="mode-text">A picture of every handshape, with tips and common mix-ups. Printable.</span>
+          </button>
+          <button type="button" class="mode-card" data-screen="learn">
+            <span class="mode-icon tone-green"><svg class="icon" aria-hidden="true"><use href="#i-target"></use></svg></span>
+            <span class="mode-title">Learn <kbd>2</kbd></span>
+            <span class="mode-text">Practice one letter at a time with live finger hints. Enter moves to the next letter.</span>
+          </button>
+          <button type="button" class="mode-card" data-screen="spell">
+            <span class="mode-icon tone-violet"><svg class="icon" aria-hidden="true"><use href="#i-type"></use></svg></span>
+            <span class="mode-title">Spell <kbd>3</kbd></span>
+            <span class="mode-text">Type any word or sentence and the coach walks you through signing it, letter by letter.</span>
+          </button>
+          <button type="button" class="mode-card" data-screen="challenge">
+            <span class="mode-icon tone-amber"><svg class="icon" aria-hidden="true"><use href="#i-timer"></use></svg></span>
+            <span class="mode-title">Challenge <kbd>4</kbd></span>
+            <span class="mode-text">A timed game: spell as many words as you can. Easy, Medium, or Hard.</span>
+          </button>
+          <button type="button" class="mode-card" data-screen="free">
+            <span class="mode-icon tone-teal"><svg class="icon" aria-hidden="true"><use href="#i-eye"></use></svg></span>
+            <span class="mode-title">Free Sign <kbd>5</kbd></span>
+            <span class="mode-text">Sign anything and watch the letter, the confidence, and the k-NN votes live.</span>
+          </button>
+          <button type="button" class="mode-card" data-screen="progress">
+            <span class="mode-icon tone-rose"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg></span>
+            <span class="mode-title">Progress <kbd>6</kbd></span>
+            <span class="mode-text">Your accuracy for every letter and every day, plus your best Challenge scores.</span>
+          </button>
+          <button type="button" class="mode-card" data-screen="data">
+            <span class="mode-icon tone-slate"><svg class="icon" aria-hidden="true"><use href="#i-flask"></use></svg></span>
+            <span class="mode-title">Test &amp; Data <kbd>7</kbd></span>
+            <span class="mode-text">How accurate is the coach? What does it know? Backups and "keep learning".</span>
+          </button>
+          <button type="button" class="mode-card" data-screen="record">
+            <span class="mode-icon tone-slate"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg></span>
+            <span class="mode-title">Add Samples <kbd>8</kbd></span>
+            <span class="mode-text">Optional teacher tool: a fluent signer can add extra correct examples.</span>
+          </button>
+        </div>
+      </section>
+
+      <details class="home-section card shortcuts-card">
+        <summary><svg class="icon" aria-hidden="true"><use href="#i-keyboard"></use></svg> Keyboard shortcuts (your hands are busy signing!)</summary>
+        <table class="data-table shortcuts">
+          <thead><tr><th scope="col">Where</th><th scope="col">Keys</th></tr></thead>
+          <tbody>
+            <tr><td>Anywhere</td><td><kbd>1</kbd>–<kbd>8</kbd> open a screen (same order as the menu) · <kbd>Esc</kbd> Home</td></tr>
+            <tr><td>Alphabet</td><td>Type a letter to practice it in Learn</td></tr>
+            <tr><td>Learn</td><td><kbd>Enter</kbd> or <kbd>→</kbd> next letter · <kbd>←</kbd> previous letter · type a letter to jump to it</td></tr>
+            <tr><td>Spell</td><td><kbd>/</kbd> type a new phrase · <kbd>→</kbd> skip a letter · <kbd>←</kbd> go back a letter</td></tr>
+            <tr><td>Challenge</td><td><kbd>Enter</kbd> start / play again · <kbd>→</kbd> skip word</td></tr>
+            <tr><td>Free Sign</td><td><kbd>Space</kbd> add a space · <kbd>Backspace</kbd> delete · <kbd>Delete</kbd> clear</td></tr>
+            <tr><td>Add Samples</td><td><kbd>Space</kbd> or <kbd>Enter</kbd> record · <kbd>←</kbd> <kbd>→</kbd> change letter · type a letter to pick it</td></tr>
+          </tbody>
+        </table>
+      </details>
     </section>
 
     <!-- ======================= ALPHABET ======================= -->
     <section id="screen-alphabet" class="screen" hidden aria-labelledby="alphabet-title">
-      <h1 id="alphabet-title">The ASL Alphabet</h1>
-      <p class="lead">
-        Each picture shows a <strong>right hand the way you'll see it in the mirror video</strong>.
-        The colors match the live skeleton on the camera, so you can match each finger.
-        Click a letter (or just type it) to practice it.
-      </p>
-      <div class="legend" aria-label="Finger colors">
-        <span><i class="swatch thumb"></i>Thumb</span>
-        <span><i class="swatch index"></i>Index</span>
-        <span><i class="swatch middle"></i>Middle</span>
-        <span><i class="swatch ring"></i>Ring</span>
-        <span><i class="swatch pinky"></i>Pinky</span>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Study</p>
+          <h1 id="alphabet-title">The ASL alphabet</h1>
+          <p class="page-sub">Each picture shows a <strong>right hand the way you'll see it in the mirror video</strong>.
+            Click a letter, or just type it, to practice it.</p>
+        </div>
+        <div class="page-actions no-print">
+          <button type="button" id="alphabet-print" class="button"><svg class="icon" aria-hidden="true"><use href="#i-print"></use></svg> Print chart</button>
+        </div>
       </div>
-      <div class="button-row no-print">
+      <div class="toolbar card no-print">
+        <div class="legend" aria-label="Finger colors">
+          <span><i class="swatch thumb"></i>Thumb</span>
+          <span><i class="swatch index"></i>Index</span>
+          <span><i class="swatch middle"></i>Middle</span>
+          <span><i class="swatch ring"></i>Ring</span>
+          <span><i class="swatch pinky"></i>Pinky</span>
+        </div>
         <label class="toggle"><input type="checkbox" id="alphabet-flip"> I sign with my left hand (flip the pictures)</label>
-        <button type="button" id="alphabet-print" class="button">🖨 Print this chart</button>
       </div>
-      <p class="note">J and Z are not included because they are signed with a movement. The coach only checks still handshapes for now.</p>
+      <p class="note">J and Z aren't shown because they're signed with a movement. The Spell screen explains how to make them.</p>
       <div id="alphabet-grid" class="alphabet-grid"></div>
     </section>
 
-    <!-- ============ CAMERA SCREENS (Record, Free Sign, Learn, Spell) ============ -->
-    <section id="screen-camera" class="screen camera-layout" hidden>
-      <div class="camera-column">
-        <div class="camera-frame" id="camera-frame">
-          <video id="video" playsinline muted></video>
-          <canvas id="overlay"></canvas>
-          <div id="camera-status" class="camera-status" role="status"></div>
-          <div id="countdown" class="countdown" hidden></div>
-          <div id="success-burst" class="success-burst" hidden>
-            <span class="success-check" aria-hidden="true">✓</span>
-            <span id="success-text" class="success-text"></span>
-          </div>
+    <!-- ============ CAMERA SCREENS (Learn, Spell, Challenge, Free Sign, Add Samples) ============ -->
+    <section id="screen-camera" class="screen" hidden aria-labelledby="camera-title">
+      <div class="page-head compact">
+        <div>
+          <p id="camera-eyebrow" class="eyebrow">Practice</p>
+          <h1 id="camera-title">Learn</h1>
+          <p id="camera-sub" class="page-sub"></p>
         </div>
-        <button type="button" id="camera-retry" class="button" hidden>Try the camera again</button>
-        <p class="camera-note">The video is mirrored like a selfie. Nothing is recorded or uploaded; only 21 hand points are saved when you record samples.</p>
       </div>
-
-      <div class="panel-column">
-        <!-- ---------- RECORD ---------- -->
-        <section id="panel-record" class="mode-panel" hidden aria-labelledby="record-title">
-          <h2 id="record-title">Add Samples <span class="count-text">(for teachers)</span></h2>
-          <p class="notice">You don't need this screen to learn. The coach already knows every letter
-            from thousands of hands of real signers. Use it only if you are a <strong>fluent signer or
-            ASL teacher</strong> adding extra correct examples, because the coach will treat them as correct.</p>
-          <p>Pick a letter, make the sign, then press <strong>Record</strong> (or <kbd>Space</kbd>).
-            The coach saves one snapshot of the hand every tenth of a second for 3 seconds.</p>
-          <div id="record-letter-grid" class="letter-grid" role="group" aria-label="Choose a letter to record"></div>
-          <div class="selected-letter-row">
-            <span id="record-selected" class="selected-letter">A</span>
-            <svg id="record-diagram" class="hand-diagram medium"></svg>
-            <div>
-              <p id="record-tip" class="tip"></p>
-              <p id="record-mixup" class="mixup"></p>
-              <p id="record-count" class="count-text"></p>
+      <div class="camera-layout">
+        <div class="camera-column">
+          <div class="camera-frame" id="camera-frame">
+            <video id="video" playsinline muted></video>
+            <canvas id="overlay"></canvas>
+            <span class="live-chip" aria-hidden="true"><span class="live-dot"></span>Mirror view</span>
+            <div id="camera-status" class="camera-status" role="status"></div>
+            <div id="countdown" class="countdown" hidden></div>
+            <div id="success-burst" class="success-burst" hidden>
+              <span class="success-check" aria-hidden="true">✓</span>
+              <span id="success-text" class="success-text"></span>
             </div>
           </div>
-          <div class="button-row">
-            <button type="button" id="record-start" class="button primary">⏺ Record (3 sec)</button>
-            <button type="button" id="record-delete-letter" class="button danger-outline">Delete this letter's samples</button>
-          </div>
-          <p id="record-status" class="feedback" aria-live="polite"></p>
-          <details class="help">
-            <summary>Tips for good samples</summary>
-            <ul>
-              <li>Record about 30-60 samples per letter. More is better.</li>
-              <li>Move your hand a little while recording: slightly closer, farther, and tilted.</li>
-              <li>Have two or more teammates record, and try both hands.</li>
-              <li>Use good lighting and keep your whole hand inside the video.</li>
-            </ul>
-          </details>
-          <p id="record-total" class="count-text"></p>
-          <p class="keyboard-hint"><strong>Keys:</strong> <kbd>Space</kbd>/<kbd>Enter</kbd> record · <kbd>←</kbd> <kbd>→</kbd> change letter · type a letter to pick it</p>
-        </section>
+          <button type="button" id="camera-retry" class="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg> Try the camera again</button>
+          <p class="camera-note"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg> Everything stays on this laptop. Only 21 hand points are ever saved, never video.</p>
+        </div>
 
-        <!-- ---------- FREE SIGN ---------- -->
-        <section id="panel-free" class="mode-panel" hidden aria-labelledby="free-title">
-          <h2 id="free-title">Free Sign</h2>
-          <div class="big-letter-row">
-            <div id="free-letter" class="big-letter" aria-live="polite">?</div>
-            <div class="big-letter-info">
-              <p class="label">Confidence</p>
-              <div class="meter" aria-hidden="true"><div id="free-confidence-bar" class="meter-fill"></div></div>
-              <p id="free-confidence" class="count-text">-</p>
-              <p class="label">Hold steady to type it</p>
-              <div class="meter" aria-hidden="true"><div id="free-hold-bar" class="meter-fill hold"></div></div>
-            </div>
-          </div>
-          <p class="label">Nearest-neighbor votes</p>
-          <div id="free-votes" class="votes"></div>
-          <p class="label">What you've typed</p>
-          <div id="free-text" class="typed-text" aria-live="polite"></div>
-          <div class="button-row">
-            <button type="button" id="free-space" class="button">Space</button>
-            <button type="button" id="free-backspace" class="button">⌫ Backspace</button>
-            <button type="button" id="free-clear" class="button">Clear</button>
-          </div>
-          <p id="free-message" class="feedback"></p>
-          <p class="keyboard-hint"><strong>Keys:</strong> <kbd>Space</kbd> add a space · <kbd>Backspace</kbd> delete · <kbd>Delete</kbd> clear</p>
-        </section>
-
-        <!-- ---------- LEARN ---------- -->
-        <section id="panel-learn" class="mode-panel" hidden aria-labelledby="learn-title">
-          <h2 id="learn-title">Learn <span id="learn-position" class="count-text"></span></h2>
-          <div id="learn-letter-grid" class="letter-grid small" role="group" aria-label="Choose a letter to learn"></div>
-          <div class="learn-target">
-            <figure class="diagram-figure">
-              <svg id="learn-diagram" class="hand-diagram large"></svg>
-              <figcaption>How to make it</figcaption>
-            </figure>
-            <div class="learn-side">
-              <div class="target-box">
-                <p class="label">Make this letter</p>
-                <div id="learn-letter" class="big-letter target compact">A</div>
+        <div class="panel-column">
+          <!-- ---------- LEARN ---------- -->
+          <section id="panel-learn" class="mode-panel" hidden aria-label="Learn">
+            <div class="card coach-card">
+              <div class="learn-target">
+                <div class="target-box">
+                  <p class="label">Make this letter</p>
+                  <div id="learn-letter" class="big-letter target compact">A</div>
+                  <span id="learn-position" class="chip"></span>
+                </div>
+                <figure class="diagram-figure">
+                  <svg id="learn-diagram" class="hand-diagram large"></svg>
+                  <figcaption>How to make it</figcaption>
+                </figure>
+                <figure class="reference">
+                  <canvas id="reference-canvas" width="200" height="200" aria-label="Average of real signers' hands"></canvas>
+                  <figcaption id="reference-caption">Average of real signers</figcaption>
+                </figure>
               </div>
-              <figure class="reference">
-                <canvas id="reference-canvas" width="200" height="200" aria-label="Average of your recorded samples"></canvas>
-                <figcaption id="reference-caption">Your recorded average</figcaption>
-              </figure>
+              <div id="learn-check" class="feedback-box">
+                <p id="learn-hint" class="hint" aria-live="polite"></p>
+                <div class="meter" aria-hidden="true"><div id="learn-hold-bar" class="meter-fill hold"></div></div>
+                <p id="learn-seeing" class="count-text"></p>
+              </div>
+              <div id="learn-no-samples" class="notice" hidden>
+                <p id="learn-no-samples-text"></p>
+                <button type="button" id="learn-record-this" class="button">Record this letter</button>
+              </div>
+              <p id="learn-tip" class="tip"></p>
+              <p id="learn-mixup" class="mixup"></p>
+              <div class="button-row">
+                <button type="button" id="learn-previous" class="button"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg> Previous</button>
+                <button type="button" id="learn-next" class="button primary">Next letter <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+              </div>
             </div>
-          </div>
-          <div id="learn-check">
-            <p id="learn-hint" class="hint" aria-live="polite"></p>
-            <div class="meter" aria-hidden="true"><div id="learn-hold-bar" class="meter-fill hold"></div></div>
-            <p id="learn-seeing" class="count-text"></p>
-          </div>
-          <div id="learn-no-samples" class="notice" hidden>
-            <p id="learn-no-samples-text"></p>
-            <button type="button" id="learn-record-this" class="button">⏺ Record this letter</button>
-          </div>
-          <p id="learn-tip" class="tip"></p>
-          <p id="learn-mixup" class="mixup"></p>
-          <div class="button-row">
-            <button type="button" id="learn-previous" class="button">← Previous</button>
-            <button type="button" id="learn-next" class="button primary">Next letter →</button>
-          </div>
-          <div class="toggle-row">
-            <label class="toggle"><input type="checkbox" id="learn-auto-advance"> Go to the next letter automatically after a correct sign</label>
-            <label class="toggle"><input type="checkbox" id="learn-flip"> I sign with my left hand (flip the picture)</label>
-          </div>
-          <p class="keyboard-hint"><strong>Keys:</strong> <kbd>Enter</kbd>/<kbd>→</kbd> next letter · <kbd>←</kbd> previous · type a letter to jump to it</p>
-        </section>
+            <div class="card">
+              <p class="label">Pick any letter</p>
+              <div id="learn-letter-grid" class="letter-grid small" role="group" aria-label="Choose a letter to learn"></div>
+              <div class="toggle-row">
+                <label class="toggle"><input type="checkbox" id="learn-auto-advance"> Go to the next letter automatically after a correct sign</label>
+                <label class="toggle"><input type="checkbox" id="learn-flip"> I sign with my left hand (flip the picture)</label>
+              </div>
+              <p class="keyboard-hint"><strong>Keys:</strong> <kbd>Enter</kbd>/<kbd>→</kbd> next letter · <kbd>←</kbd> previous · type a letter to jump to it</p>
+            </div>
+          </section>
 
-        <!-- ---------- SPELL-A-WORD ---------- -->
-        <section id="panel-spell" class="mode-panel" hidden aria-labelledby="spell-title">
-          <h2 id="spell-title">Spell-a-Word</h2>
-          <div class="scoreboard">
-            <div><p class="label">Time</p><p id="spell-timer" class="score-number">60</p></div>
-            <div><p class="label">Score</p><p id="spell-score" class="score-number">0</p></div>
-            <div><p class="label">Best</p><p id="spell-best" class="score-number">0</p></div>
-          </div>
-          <div id="spell-word" class="spell-word" aria-live="polite"></div>
-          <div class="spell-hint-row">
-            <svg id="spell-diagram" class="hand-diagram small" hidden></svg>
-            <p id="spell-target-tip" class="tip"></p>
-          </div>
-          <div class="meter" aria-hidden="true"><div id="spell-hold-bar" class="meter-fill hold"></div></div>
-          <p id="spell-feedback" class="feedback" aria-live="polite">Press Start. You have 60 seconds to spell as many words as you can.</p>
-          <div class="button-row">
-            <button type="button" id="spell-start" class="button primary">▶ Start</button>
-            <button type="button" id="spell-skip" class="button" disabled>Skip word</button>
-          </div>
-          <label class="toggle"><input type="checkbox" id="spell-picture-hints"> Show a picture of the next letter</label>
-          <p class="count-text">+10 for each correct letter, +20 bonus for each finished word.</p>
-          <p class="keyboard-hint"><strong>Keys:</strong> <kbd>Enter</kbd> start / play again · <kbd>→</kbd> skip word</p>
-        </section>
+          <!-- ---------- SPELL (type a word, learn to sign it) ---------- -->
+          <section id="panel-spell" class="mode-panel" hidden aria-label="Spell">
+            <form id="spell-form" class="card spell-form" autocomplete="off">
+              <label for="spell-input" class="label">Type a word or sentence to learn how to sign it</label>
+              <div class="input-row">
+                <input type="text" id="spell-input" maxlength="60" placeholder="For example: Hello world" spellcheck="false">
+                <button type="submit" class="button primary">Teach me</button>
+              </div>
+              <div class="example-chips">
+                <span class="count-text">Try:</span>
+                <button type="button" class="chip-button" data-phrase="Hello">Hello</button>
+                <button type="button" class="chip-button" data-phrase="Thank you">Thank you</button>
+                <button type="button" class="chip-button" data-phrase="Nice to meet you">Nice to meet you</button>
+                <button type="button" class="chip-button" data-phrase="I love ASL">I love ASL</button>
+              </div>
+              <p id="spell-form-note" class="count-text" aria-live="polite"></p>
+            </form>
+
+            <div id="spell-empty" class="card empty-state">
+              <svg class="icon empty-icon" aria-hidden="true"><use href="#i-type"></use></svg>
+              <p>Type your name, a word, or a sentence above and press <strong>Teach me</strong>.
+                The coach shows each letter's handshape and checks your signing with the camera,
+                one letter at a time.</p>
+            </div>
+
+            <div id="spell-lesson" class="card coach-card" hidden>
+              <div id="spell-phrase" class="phrase-tiles" aria-label="Your phrase, letter by letter"></div>
+              <div class="learn-target">
+                <div class="target-box">
+                  <p class="label">Sign this letter</p>
+                  <div id="spell-current-letter" class="big-letter target compact">A</div>
+                  <span id="spell-step" class="chip"></span>
+                </div>
+                <figure class="diagram-figure">
+                  <svg id="spell-diagram" class="hand-diagram large"></svg>
+                  <figcaption>How to make it</figcaption>
+                </figure>
+              </div>
+              <div class="feedback-box">
+                <p id="spell-hint" class="hint" aria-live="polite"></p>
+                <div class="meter" aria-hidden="true"><div id="spell-hold-bar" class="meter-fill hold"></div></div>
+                <p id="spell-seeing" class="count-text"></p>
+              </div>
+              <p id="spell-tip" class="tip"></p>
+              <p id="spell-mixup" class="mixup"></p>
+              <div class="button-row">
+                <button type="button" id="spell-back" class="button"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg> Back</button>
+                <button type="button" id="spell-skip" class="button">Skip letter <svg class="icon" aria-hidden="true"><use href="#i-skip"></use></svg></button>
+                <button type="button" id="spell-restart" class="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg> Start over</button>
+              </div>
+              <p class="keyboard-hint"><strong>Keys:</strong> <kbd>/</kbd> type a new phrase · <kbd>→</kbd> skip a letter · <kbd>←</kbd> go back</p>
+            </div>
+          </section>
+
+          <!-- ---------- CHALLENGE (timed game) ---------- -->
+          <section id="panel-challenge" class="mode-panel" hidden aria-label="Challenge">
+            <div class="card">
+              <p class="label">Difficulty</p>
+              <div id="challenge-difficulty" class="segmented" role="radiogroup" aria-label="Difficulty">
+                <button type="button" role="radio" data-difficulty="easy">Easy<small>2–3 letters · 90 s</small></button>
+                <button type="button" role="radio" data-difficulty="medium">Medium<small>3–4 letters · 60 s · ×2</small></button>
+                <button type="button" role="radio" data-difficulty="hard">Hard<small>4–6 letters · 45 s · ×3</small></button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="scoreboard">
+                <div class="score-tile"><p class="label">Time</p><p id="challenge-timer" class="score-number">60</p></div>
+                <div class="score-tile"><p class="label">Score</p><p id="challenge-score" class="score-number">0</p></div>
+                <div class="score-tile"><p class="label">Best</p><p id="challenge-best" class="score-number">0</p></div>
+              </div>
+              <div id="challenge-word" class="spell-word" aria-live="polite"></div>
+              <div class="spell-hint-row">
+                <svg id="challenge-diagram" class="hand-diagram small" hidden></svg>
+                <p id="challenge-target-tip" class="tip"></p>
+              </div>
+              <div class="meter" aria-hidden="true"><div id="challenge-hold-bar" class="meter-fill hold"></div></div>
+              <p id="challenge-feedback" class="feedback" aria-live="polite"></p>
+              <div class="button-row">
+                <button type="button" id="challenge-start" class="button primary large"><svg class="icon" aria-hidden="true"><use href="#i-play"></use></svg> Start</button>
+                <button type="button" id="challenge-skip" class="button" disabled>Skip word <svg class="icon" aria-hidden="true"><use href="#i-skip"></use></svg></button>
+              </div>
+              <label class="toggle"><input type="checkbox" id="challenge-picture-hints"> Show a picture of the next letter <span id="challenge-picture-note" class="count-text"></span></label>
+              <p id="challenge-rules" class="count-text"></p>
+              <p class="keyboard-hint"><strong>Keys:</strong> <kbd>Enter</kbd> start / play again · <kbd>→</kbd> skip word</p>
+            </div>
+          </section>
+
+          <!-- ---------- FREE SIGN ---------- -->
+          <section id="panel-free" class="mode-panel" hidden aria-label="Free Sign">
+            <div class="card">
+              <div class="big-letter-row">
+                <div id="free-letter" class="big-letter" aria-live="polite">?</div>
+                <div class="big-letter-info">
+                  <p class="label">Confidence</p>
+                  <div class="meter" aria-hidden="true"><div id="free-confidence-bar" class="meter-fill"></div></div>
+                  <p id="free-confidence" class="count-text">-</p>
+                  <p class="label">Hold steady to type it</p>
+                  <div class="meter" aria-hidden="true"><div id="free-hold-bar" class="meter-fill hold"></div></div>
+                </div>
+              </div>
+              <p class="label">Nearest-neighbor votes</p>
+              <div id="free-votes" class="votes"></div>
+              <p id="free-message" class="feedback"></p>
+            </div>
+            <div class="card">
+              <p class="label">What you've typed</p>
+              <div id="free-text" class="typed-text" aria-live="polite"></div>
+              <div class="button-row">
+                <button type="button" id="free-space" class="button">Space</button>
+                <button type="button" id="free-backspace" class="button">⌫ Backspace</button>
+                <button type="button" id="free-clear" class="button">Clear</button>
+              </div>
+              <p class="keyboard-hint"><strong>Keys:</strong> <kbd>Space</kbd> add a space · <kbd>Backspace</kbd> delete · <kbd>Delete</kbd> clear</p>
+            </div>
+          </section>
+
+          <!-- ---------- ADD SAMPLES (teacher tool) ---------- -->
+          <section id="panel-record" class="mode-panel" hidden aria-label="Add Samples">
+            <p class="notice">You don't need this screen to learn: the coach already knows every letter
+              from thousands of hands of real signers. Use it only if you are a <strong>fluent signer or
+              ASL teacher</strong> adding extra correct examples, because the coach will treat them as correct.</p>
+            <div class="card">
+              <p class="label">Pick a letter</p>
+              <div id="record-letter-grid" class="letter-grid" role="group" aria-label="Choose a letter to record"></div>
+              <div class="selected-letter-row">
+                <span id="record-selected" class="big-letter target compact">A</span>
+                <svg id="record-diagram" class="hand-diagram medium"></svg>
+                <div>
+                  <p id="record-tip" class="tip"></p>
+                  <p id="record-count" class="count-text"></p>
+                </div>
+              </div>
+              <p id="record-mixup" class="mixup"></p>
+              <div class="button-row">
+                <button type="button" id="record-start" class="button primary"><svg class="icon" aria-hidden="true"><use href="#i-record"></use></svg> Record (3 sec)</button>
+                <button type="button" id="record-delete-letter" class="button danger-outline">Delete this letter's added samples</button>
+              </div>
+              <p id="record-status" class="feedback" aria-live="polite"></p>
+              <p id="record-total" class="count-text"></p>
+              <details class="help">
+                <summary>Tips for good samples</summary>
+                <ul>
+                  <li>Each press saves about 30 snapshots in 3 seconds. Move your hand a little while recording.</li>
+                  <li>Use good lighting and keep your whole hand inside the video.</li>
+                </ul>
+              </details>
+              <p class="keyboard-hint"><strong>Keys:</strong> <kbd>Space</kbd>/<kbd>Enter</kbd> record · <kbd>←</kbd> <kbd>→</kbd> change letter · type a letter to pick it</p>
+            </div>
+          </section>
+        </div>
       </div>
     </section>
 
     <!-- ======================= PROGRESS ======================= -->
     <section id="screen-progress" class="screen" hidden aria-labelledby="progress-title">
-      <h1 id="progress-title">Your Progress</h1>
-      <p>Every letter you lock in during <strong>Learn</strong> or <strong>Spell-a-Word</strong> counts as one attempt.</p>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Your stats</p>
+          <h1 id="progress-title">Progress</h1>
+          <p class="page-sub">Every letter you lock in during Learn, Spell, or Challenge counts as one attempt.</p>
+        </div>
+        <div class="page-actions">
+          <button type="button" id="progress-reset" class="button danger-outline">Reset progress</button>
+        </div>
+      </div>
       <div id="progress-summary" class="summary-cards"></div>
-      <h2>Accuracy by letter</h2>
-      <div id="progress-letters"></div>
-      <h2>Accuracy by day</h2>
-      <div id="progress-days"></div>
-      <div class="button-row">
-        <button type="button" id="progress-reset" class="button danger-outline">Reset progress</button>
+      <div class="card">
+        <h2 class="card-title">Accuracy by letter</h2>
+        <div id="progress-letters"></div>
+      </div>
+      <div class="card">
+        <h2 class="card-title">Accuracy by day</h2>
+        <div id="progress-days"></div>
       </div>
     </section>
 
     <!-- ======================= TEST & DATA ======================= -->
     <section id="screen-data" class="screen" hidden aria-labelledby="data-title">
-      <h1 id="data-title">Test &amp; Data</h1>
-
-      <h2>How accurate is the coach?</h2>
-      <p>
-        A fair test: the coach hides <strong>all</strong> the signs of one person, then tries to
-        recognize them using only the <em>other</em> people's hands. It does this for every person,
-        so the score shows how well it works for someone it has never seen, like a new user.
-      </p>
-      <div class="button-row">
-        <button type="button" id="accuracy-run" class="button primary">Test on people it has never seen</button>
-      </div>
-      <p id="accuracy-status" class="count-text" aria-live="polite"></p>
-      <div id="accuracy-results" aria-live="polite"></div>
-
-      <h2>What the coach knows</h2>
-      <div class="summary-cards">
-        <div class="summary-card"><p class="label">Real signers' hands</p><p id="knowledge-reference" class="score-number">0</p><p class="count-text">built in, never changes</p></div>
-        <div class="summary-card"><p class="label">Added by teachers</p><p id="knowledge-teacher" class="score-number">0</p><p class="count-text">Add Samples screen</p></div>
-        <div class="summary-card"><p class="label">Learned from you</p><p id="knowledge-learned" class="score-number">0</p><p class="count-text">max 30 per letter</p></div>
-      </div>
-      <label class="toggle"><input type="checkbox" id="keep-learning"> Keep learning from my correct signs</label>
-      <p class="note">
-        When you sign a letter correctly in Learn or Spell-a-Word, the coach can save that sign so it gets
-        used to your hand and camera. To make sure it never learns a mistake, it only saves a sign when
-        the <strong>real signers alone</strong> strongly agree it's correct (4 of the 5 closest matches).
-      </p>
-      <div class="button-row">
-        <button type="button" id="forget-learned" class="button danger-outline">Forget what it learned from me</button>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Under the hood</p>
+          <h1 id="data-title">Test &amp; Data</h1>
+          <p class="page-sub">How accurate the coach is, what it knows, and where its data comes from.</p>
+        </div>
       </div>
 
-      <h2>Backup and share</h2>
-      <p>
-        Added samples, learned samples, and your progress are saved in this browser only. Export them to
-        a file for a backup, or Import a teammate's file (Import adds to what's already here).
-      </p>
-      <p id="data-summary" class="count-text"></p>
-      <div class="button-row">
-        <button type="button" id="export-button" class="button">⬇ Export data (.json)</button>
-        <label class="button" for="import-file">⬆ Import data (.json)</label>
-        <input type="file" id="import-file" accept=".json,application/json" class="visually-hidden">
-        <button type="button" id="delete-all" class="button danger-outline">Delete added + learned samples and progress</button>
+      <div class="card">
+        <h2 class="card-title">How accurate is the coach?</h2>
+        <p>
+          A fair test: the coach hides <strong>all</strong> the signs of one person, then tries to
+          recognize them using only the <em>other</em> people's hands. It does this for every person,
+          so the score shows how well it works for someone it has never seen, like a new user.
+        </p>
+        <div class="button-row">
+          <button type="button" id="accuracy-run" class="button primary"><svg class="icon" aria-hidden="true"><use href="#i-flask"></use></svg> Test on people it has never seen</button>
+        </div>
+        <p id="accuracy-status" class="count-text" aria-live="polite"></p>
+        <div id="accuracy-results" aria-live="polite"></div>
       </div>
-      <p id="data-status" class="feedback" aria-live="polite"></p>
 
-      <h2>Where the real-signer data comes from</h2>
-      <p>The reference hands were made from photos in two public datasets, both shared under the
-        Creative Commons Attribution 4.0 (CC BY 4.0) license. We ran MediaPipe on the photos and kept
-        only the 21 hand points of each one; no photos are included in this app.</p>
-      <ul class="credits">
-        <li>Sowrow, A. R. A., Iftekhar, M. I. A. S., Prova, S. I., &amp; Huq, M. R. (2024).
-          <em>Images of American Sign Language (ASL) Alphabet Gestures</em> (Version 2). Mendeley Data.
-          doi:10.17632/48dg9vhmyk.2</li>
-        <li>Cabana Garceran del Vall, E. (2026). <em>American Sign Language Image Dataset (fingerspelling
-          original + keypoints + evaluation)</em> (Version 1). Mendeley Data. doi:10.17632/97yd3b5f5h.1</li>
-      </ul>
+      <div class="card">
+        <h2 class="card-title">What the coach knows</h2>
+        <div class="summary-cards">
+          <div class="summary-card"><p class="label">Real signers' hands</p><p id="knowledge-reference" class="score-number">0</p><p class="count-text">built in, never changes</p></div>
+          <div class="summary-card"><p class="label">Added by teachers</p><p id="knowledge-teacher" class="score-number">0</p><p class="count-text">Add Samples screen</p></div>
+          <div class="summary-card"><p class="label">Learned from you</p><p id="knowledge-learned" class="score-number">0</p><p class="count-text">max 30 per letter</p></div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="keep-learning"> Keep learning from my correct signs</label>
+        <p class="note">
+          When you sign a letter correctly, the coach can save that sign so it gets used to your hand and
+          camera. To make sure it never learns a mistake, it only saves a sign when the
+          <strong>real signers alone</strong> strongly agree it's correct (4 of the 5 closest matches).
+        </p>
+        <div class="button-row">
+          <button type="button" id="forget-learned" class="button danger-outline">Forget what it learned from me</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Backup and share</h2>
+        <p>Added samples, learned samples, and your progress are saved in this browser only. Export them to
+          a file for a backup, or Import a teammate's file (Import adds to what's already here).</p>
+        <p id="data-summary" class="count-text"></p>
+        <div class="button-row">
+          <button type="button" id="export-button" class="button"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg> Export data</button>
+          <label class="button" for="import-file"><svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg> Import data</label>
+          <input type="file" id="import-file" accept=".json,application/json" class="visually-hidden">
+          <button type="button" id="delete-all" class="button danger-outline">Delete added + learned samples and progress</button>
+        </div>
+        <p id="data-status" class="feedback" aria-live="polite"></p>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Where the real-signer data comes from</h2>
+        <p>The reference hands were made from photos in two public datasets, both shared under the
+          Creative Commons Attribution 4.0 (CC BY 4.0) license. We ran MediaPipe on the photos and kept
+          only the 21 hand points of each one; no photos are included in this app.</p>
+        <ul class="credits">
+          <li>Sowrow, A. R. A., Iftekhar, M. I. A. S., Prova, S. I., &amp; Huq, M. R. (2024).
+            <em>Images of American Sign Language (ASL) Alphabet Gestures</em> (Version 2). Mendeley Data.
+            doi:10.17632/48dg9vhmyk.2</li>
+          <li>Cabana Garceran del Vall, E. (2026). <em>American Sign Language Image Dataset (fingerspelling
+            original + keypoints + evaluation)</em> (Version 1). Mendeley Data. doi:10.17632/97yd3b5f5h.1</li>
+        </ul>
+      </div>
     </section>
   </main>
+
+  <footer class="site-footer">
+    <p><strong>ASL Fingerspelling Coach</strong> · Runs entirely offline in your browser · Hand tracking by
+      Google MediaPipe · Real-signer data from two CC BY 4.0 datasets (credits on Test &amp; Data)</p>
+  </footer>
 </body>
 </html>

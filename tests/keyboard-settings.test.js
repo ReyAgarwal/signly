@@ -36,7 +36,8 @@ test('typing a letter picks it (lowercase works too), but not J or Z', () => {
 test('number keys and Esc switch screens from anywhere', () => {
   assert.equal(shortcutFor(press('1'), 'home'), 'go:alphabet');
   assert.equal(shortcutFor(press('2'), 'spell'), 'go:learn');
-  assert.equal(shortcutFor(press('7'), 'home'), 'go:record');
+  assert.equal(shortcutFor(press('4'), 'home'), 'go:challenge');
+  assert.equal(shortcutFor(press('8'), 'home'), 'go:record');
   assert.equal(shortcutFor(press('Escape'), 'learn'), 'go:home');
 });
 
@@ -44,10 +45,13 @@ test('each mode gets its own keys', () => {
   assert.equal(shortcutFor(press(' '), 'record'), 'record');
   assert.equal(shortcutFor(press(' '), 'free'), 'space');
   assert.equal(shortcutFor(press('Backspace'), 'free'), 'backspace');
-  assert.equal(shortcutFor(press('Enter'), 'spell'), 'start');
-  assert.equal(shortcutFor(press('ArrowRight'), 'spell'), 'skip');
-  // Letter keys don't do anything on the Spell screen.
+  assert.equal(shortcutFor(press('Enter'), 'challenge'), 'start');
+  assert.equal(shortcutFor(press('ArrowRight'), 'challenge'), 'skip');
+  assert.equal(shortcutFor(press('ArrowRight'), 'spell'), 'next-letter');
+  assert.equal(shortcutFor(press('/'), 'spell'), 'focus-input');
+  // Letter keys don't do anything on the Spell or Challenge screens (you type in the box instead).
   assert.equal(shortcutFor(press('a'), 'spell'), null);
+  assert.equal(shortcutFor(press('a'), 'challenge'), null);
 });
 
 test('browser shortcuts and focused buttons are left alone', () => {
@@ -76,6 +80,11 @@ test('settings use defaults, save, load, and ignore junk', () => {
   const cleaned = loadSettings(storage);
   assert.equal(cleaned.autoAdvance, DEFAULT_SETTINGS.autoAdvance);
   assert.equal('hacker' in cleaned, false);
+
+  data.set(SETTINGS_KEY, JSON.stringify({ challengeDifficulty: 'hard' }));
+  assert.equal(loadSettings(storage).challengeDifficulty, 'hard');
+  data.set(SETTINGS_KEY, JSON.stringify({ challengeDifficulty: 'impossible' }));
+  assert.equal(loadSettings(storage).challengeDifficulty, 'medium');
 
   data.set(SETTINGS_KEY, '{ broken json');
   assert.deepEqual(loadSettings(storage), DEFAULT_SETTINGS);

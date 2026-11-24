@@ -11,7 +11,7 @@
  *               (source = 'teacher' for samples added on the Add Samples screen,
  *                or 'learned' for samples saved automatically from correct signs)
  *     attempts: [ { letter, correct, mode, time }, ... ],
- *     bestSpellScore: 0
+ *     bestScores: { easy: 0, medium: 0, hard: 0 }   (best Challenge score per difficulty)
  *   }
  *
  * Why export/import? localStorage only lives in ONE browser on ONE laptop.
@@ -33,10 +33,10 @@ export const FEATURE_LENGTH = 63;
 
 /**
  * Creates a brand-new, empty data object.
- * @returns {{version:number, samples:Array, attempts:Array, bestSpellScore:number}} Empty data.
+ * @returns {{version:number, samples:Array, attempts:Array, bestScores:Object<string,number>}} Empty data.
  */
 export function emptyData() {
-  return { version: 1, samples: [], attempts: [], bestSpellScore: 0 };
+  return { version: 1, samples: [], attempts: [], bestScores: { easy: 0, medium: 0, hard: 0 } };
 }
 
 /**
@@ -104,7 +104,7 @@ export function isValidAttempt(attempt) {
 /**
  * Builds a clean data object from untrusted input, keeping only valid parts.
  * @param {*} raw - Parsed JSON from localStorage or an imported file.
- * @returns {{version:number, samples:Array, attempts:Array, bestSpellScore:number}} Clean data.
+ * @returns {{version:number, samples:Array, attempts:Array, bestScores:Object<string,number>}} Clean data.
  */
 export function cleanData(raw) {
   const data = emptyData();
@@ -129,8 +129,16 @@ export function cleanData(raw) {
     data.attempts = raw.attempts.filter(isValidAttempt);
   }
 
+  // Older versions saved one "bestSpellScore"; it was a 60-second game, like Medium.
   if (typeof raw.bestSpellScore === 'number') {
-    data.bestSpellScore = raw.bestSpellScore;
+    data.bestScores.medium = raw.bestSpellScore;
+  }
+  if (raw.bestScores && typeof raw.bestScores === 'object') {
+    for (const level of Object.keys(data.bestScores)) {
+      if (typeof raw.bestScores[level] === 'number') {
+        data.bestScores[level] = raw.bestScores[level];
+      }
+    }
   }
   return data;
 }
@@ -235,7 +243,11 @@ export function mergeData(current, incoming) {
     version: 1,
     samples: [...current.samples, ...newSamples],
     attempts: allAttempts,
-    bestSpellScore: Math.max(current.bestSpellScore, incoming.bestSpellScore),
+    bestScores: {
+      easy: Math.max(current.bestScores.easy, incoming.bestScores.easy),
+      medium: Math.max(current.bestScores.medium, incoming.bestScores.medium),
+      hard: Math.max(current.bestScores.hard, incoming.bestScores.hard),
+    },
   };
   return { data: merged, addedSamples: newSamples.length, addedAttempts: newAttempts.length };
 }
@@ -247,6 +259,7 @@ export const SETTINGS_KEY = 'aslFingerspellingCoach.settings';
 
 /** Settings used when nothing has been saved yet. */
 export const DEFAULT_SETTINGS = {
+  challengeDifficulty: 'medium',
   keepLearning: true,
   flipDiagrams: false,
   autoAdvance: true,
@@ -256,7 +269,8 @@ export const DEFAULT_SETTINGS = {
 /**
  * Loads settings, filling in defaults for anything missing or broken.
  * @param {Storage|null} storage - Where to load from (defaults to the browser's localStorage).
- * @returns {{keepLearning:boolean, flipDiagrams:boolean, autoAdvance:boolean, spellPictureHints:boolean}} The settings.
+ * @returns {{challengeDifficulty:string, keepLearning:boolean, flipDiagrams:boolean, autoAdvance:boolean,
+ *   spellPictureHints:boolean}} The settings.
  */
 export function loadSettings(storage = getBrowserStorage()) {
   const settings = { ...DEFAULT_SETTINGS };
@@ -265,9 +279,11 @@ export function loadSettings(storage = getBrowserStorage()) {
   }
   try {
     const saved = JSON.parse(storage.getItem(SETTINGS_KEY) ?? '{}');
-    // Only copy settings we know about, and only if they're true/false.
+    // Only copy settings we know about, and only if they're the right type
+    // (and, for the difficulty, one of the real levels).
     for (const name of Object.keys(DEFAULT_SETTINGS)) {
-      if (typeof saved[name] === 'boolean') {
+      const sameType = typeof saved[name] === typeof DEFAULT_SETTINGS[name];
+      if (sameType && (name !== 'challengeDifficulty' || ['easy', 'medium', 'hard'].includes(saved[name]))) {
         settings[name] = saved[name];
       }
     }

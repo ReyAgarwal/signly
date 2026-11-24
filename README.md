@@ -24,7 +24,8 @@ signing, tells you which finger to fix, and tracks your progress over time.
 | **Alphabet** | A **diagram of every handshape**, with how-to text and a "Watch out" note about the letter it's most often confused with. Click or type a letter to practice it. Can be flipped for left-handed signers, and printed as a study sheet. |
 | **Free Sign** | Sign anything. Shows the recognized letter, the confidence %, the actual k-NN neighbor votes, and types out letters you hold steady. |
 | **Learn** | Pick a target letter. A **diagram** shows how to make it, next to a skeleton of the **average real signer's hand**. Live hints tell you which finger to fix and draw that finger in **red** on the camera *and* the diagram. Hold the right letter for half a second to get a success animation, then it moves to the next letter automatically (or press **Enter**). |
-| **Spell-a-Word** | 60-second game: spell short words letter by letter, with a small picture of the next letter (can be turned off). +10 per letter, +20 per word. Saves your best score. |
+| **Spell** | Type **any word or sentence** (your name, "Nice to meet you"...) and the coach teaches you to fingerspell it, letter by letter: diagram, tip, live finger hints, and a camera check that moves on when you get each letter right. J and Z (motion letters) get written instructions. |
+| **Challenge** | Timed game: spell as many words as you can. **Easy** (2–3 letters, 90 s), **Medium** (3–4 letters, 60 s, ×2 points), or **Hard** (4–6 letters, 45 s, ×3 points, no picture hints). Best score saved for each level. |
 | **Progress** | Accuracy for every letter, and for every day, so you can see improvement over time. |
 | **Test & Data** | **Fair accuracy test** (hides each person in turn and recognizes their signs using everyone else, shows per-person and per-letter accuracy and which letters get confused), what the coach knows (real signers / teacher-added / learned from you), the **keep learning** switch, **Export/Import**, and dataset credits. |
 | **Add Samples** | *Optional teacher tool.* A fluent signer or ASL teacher can record extra correct examples (about 30 snapshots in 3 seconds). Learners never need it. |
@@ -35,10 +36,11 @@ Your hands are busy signing, so most things work from the keyboard:
 
 | Where | Keys |
 |-------|------|
-| Anywhere | `1`–`7` open a screen (same order as the menu: Alphabet, Learn, Spell, Free Sign, Progress, Test & Data, Add Samples) · `Esc` Home |
+| Anywhere | `1`–`8` open a screen (same order as the menu: Alphabet, Learn, Spell, Challenge, Free Sign, Progress, Test & Data, Add Samples) · `Esc` Home |
 | Alphabet | Type a letter to practice it in Learn |
 | Learn | `Enter` or `→` next letter · `←` previous letter · type a letter to jump to it |
-| Spell | `Enter` start / play again · `→` skip word |
+| Spell | `/` type a new phrase · `→` skip a letter · `←` go back a letter |
+| Challenge | `Enter` start / play again · `→` skip word |
 | Free Sign | `Space` add a space · `Backspace` delete · `Delete` clear |
 | Add Samples | `Space` or `Enter` record · `←` `→` change letter · type a letter to pick it |
 
@@ -101,7 +103,7 @@ There's nothing to set up: the coach already knows every letter.
 
 1. Open the **Alphabet** (`1`) and look through the handshapes.
 2. Open **Learn** (`2`), copy the picture, and hold the sign steady.
-3. Play **Spell-a-Word** (`3`) once you know a few letters.
+3. Type your name on **Spell** (`3`), then try the timed **Challenge** (`4`).
 
 **Optional:** to back up progress (and anything the coach learned from you), use
 **Test & Data → Export**. A fluent signer can add extra examples on **Add Samples**.
@@ -116,7 +118,7 @@ The unit tests use Node's built-in test runner. **There is nothing to install.**
 node --test          # or: npm test
 ```
 
-There are 84 tests in `tests/`:
+There are 91 tests in `tests/`:
 
 | Test file | What it checks |
 |-----------|----------------|
@@ -124,7 +126,8 @@ There are 84 tests in `tests/`:
 | `classifier.test.js` | k-NN: distance, nearest neighbors, voting, tie-breaks, confidence %, hold-out split, accuracy test, confusion list |
 | `hints.test.js` | Angles: vector angles, joint bends, finger bends, templates, which finger to fix, hint wording |
 | `smoothing.test.js` | Majority vote, hold-to-lock timing, one lock per hold, reset for double letters |
-| `games-progress-storage.test.js` | Spell-a-Word scoring and timer, progress statistics, saving, loading, import/export |
+| `games-progress-storage.test.js` | Challenge scoring, timer, difficulty levels and word lengths, progress statistics, saving, loading, import/export |
+| `phrase.test.js` | Turning typed text into letters for Spell (uppercase, words, J/Z, skipping punctuation, length limit) |
 | `handModel.test.js` | Diagram hand model: bone lengths, rotations, the thumb really touching the fingertip in F/O/D/W, A/S/T thumbs in different places, back-to-front drawing order |
 | `keyboard-settings.test.js` | Which key does what on each screen, not stealing keys from buttons/text boxes, saving settings |
 | `features-reference-learning.test.js` | Feature vector (tilting the hand doesn't change the shape part), the real-signer data (all 24 letters, several people, valid numbers, credits), the keep-learning safety rules, and the fair leave-one-person-out test |
@@ -150,7 +153,8 @@ js/
   classifier.js             k-NEAREST NEIGHBORS + the accuracy test / confusion matrix
   hints.js                  FINGER ANGLES, letter templates, "curl your index finger" hints
   smoothing.js              MAJORITY VOTE + hold-0.5-seconds-to-lock
-  games.js                  Spell-a-Word rules (words, timer, scoring)
+  games.js                  Challenge rules (word list, difficulty levels, timer, scoring)
+  phrase.js                 Turns typed text into letters to fingerspell (for Spell)
   progress.js               Accuracy-per-letter and per-day statistics
   storage.js                localStorage save/load (with try/catch) + JSON export/import
   ui.js                     Page helpers: screens, banners, letter grid, tables, animation
@@ -170,7 +174,8 @@ tools/                      How the reference data was built + the diagram check
   modes/recordMode.js       Add Samples screen (optional teacher tool)
   modes/freeMode.js         Free Sign screen
   modes/learnMode.js        Learn screen (diagram, hints, auto-advance)
-  modes/spellMode.js        Spell-a-Word screen
+  modes/spellMode.js        Spell screen (type a phrase, learn to sign it)
+  modes/challengeMode.js    Challenge screen (timed game with difficulty levels)
 
 tests/                      Unit tests (node --test)
 docs/HOW_IT_WORKS.md        Plain-language explanation of the math, with examples

@@ -20,14 +20,11 @@
  */
 
 import { STATIC_LETTERS, LETTER_TIPS, LETTER_MIXUPS } from '../letters.js';
-import { LetterSmoother, majorityVote } from '../smoothing.js';
+import { LetterSmoother, HintSmoother } from '../smoothing.js';
 import { findFingerToFix, hintMessage } from '../hints.js';
 import { drawReferenceHand } from '../draw.js';
 import { renderHandDiagram } from '../diagram.js';
 import { byId, setMeter, renderLetterGrid, showSuccessBurst, formatPercent } from '../ui.js';
-
-/** How many recent frames vote on which finger hint to show (stops flicker). */
-const HINT_WINDOW = 12;
 
 /** After picking a letter, give the user this long to get their hand ready. */
 const GET_READY_MS = 1500;
@@ -42,8 +39,8 @@ const AUTO_ADVANCE_DELAY_MS = 1800;
  */
 export function createLearnMode(app) {
   const smoother = new LetterSmoother();
+  const hints = new HintSmoother();
   let targetLetter = STATIC_LETTERS[0];
-  let recentHintFingers = [];
   let getReadyUntilMs = 0;
   let autoAdvanceTimer = null;
   let shownDiagramKey = '';
@@ -118,7 +115,7 @@ export function createLearnMode(app) {
     clearTimeout(autoAdvanceTimer);
     targetLetter = letter;
     smoother.reset();
-    recentHintFingers = [];
+    hints.reset();
     setMeter(byId('learn-hold-bar'), 0);
     seeingText.textContent = '';
     // Without this pause, whatever shape the hand is ALREADY holding would
@@ -126,7 +123,7 @@ export function createLearnMode(app) {
     getReadyUntilMs = performance.now() + GET_READY_MS;
 
     const position = STATIC_LETTERS.indexOf(letter) + 1;
-    byId('learn-position').textContent = '· letter ' + position + ' of ' + STATIC_LETTERS.length;
+    byId('learn-position').textContent = 'Letter ' + position + ' of ' + STATIC_LETTERS.length;
     byId('learn-letter').textContent = letter;
     byId('learn-tip').textContent = LETTER_TIPS[letter];
     byId('learn-mixup').textContent = LETTER_MIXUPS[letter];
@@ -145,25 +142,6 @@ export function createLearnMode(app) {
     const index = STATIC_LETTERS.indexOf(targetLetter);
     // Adding "count" before % keeps the result positive when going back from A.
     setTarget(STATIC_LETTERS[(index + step + count) % count]);
-  }
-
-  /**
-   * Decides which finger hint to show, using a vote over recent frames so the
-   * hint doesn't jump between fingers every frame.
-   * @param {Object|null} fix - This frame's finger to fix (from findFingerToFix).
-   * @returns {Object|null} The steady fix to show.
-   */
-  function steadyFix(fix) {
-    recentHintFingers.push(fix ? fix.finger + '|' + fix.action : null);
-    if (recentHintFingers.length > HINT_WINDOW) {
-      recentHintFingers.shift();
-    }
-    const winner = majorityVote(recentHintFingers).label;
-    if (!winner) {
-      return null;
-    }
-    const [finger, action] = winner.split('|');
-    return { finger, action };
   }
 
   /**
@@ -286,14 +264,15 @@ export function createLearnMode(app) {
       // Signing the right letter? Then no finger hint, just encouragement.
       const looksRight = guess.letter === targetLetter && guess.confidence >= app.minConfidence;
       if (looksRight) {
-        recentHintFingers = [];
+        hints.reset();
         showLooksRight(smooth.holdProgress);
         showDiagram(null);
         return { highlightFinger: null };
       }
 
       // Otherwise compare finger bends with the template and coach one finger.
-      const fix = steadyFix(findFingerToFix(hand.bends, template.bends));
+      // The hint smoother stops the hint from jumping between fingers every frame.
+      const fix = hints.update(findFingerToFix(hand.bends, template.bends));
       hintText.className = 'hint';
       hintText.textContent = hintMessage(fix);
       const highlightFinger = fix ? fix.finger : null;

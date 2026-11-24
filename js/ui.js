@@ -16,7 +16,16 @@ import { statsByLetter, statsByDay, letterHistory, overallStats } from './progre
 import { createHandDiagram } from './diagram.js';
 
 /** Screens that use the webcam. */
-export const CAMERA_SCREENS = ['record', 'free', 'learn', 'spell'];
+export const CAMERA_SCREENS = ['learn', 'spell', 'challenge', 'free', 'record'];
+
+/** The heading shown above the camera for each camera screen. */
+const CAMERA_HEADINGS = {
+  learn: { eyebrow: 'Practice', title: 'Learn', sub: 'Copy the picture, hold the sign steady, and fix the finger that turns red.' },
+  spell: { eyebrow: 'Practice', title: 'Spell', sub: 'Type a word or sentence, and the coach teaches you how to fingerspell it, letter by letter.' },
+  challenge: { eyebrow: 'Game', title: 'Challenge', sub: 'Spell as many words as you can before time runs out.' },
+  free: { eyebrow: 'Explore', title: 'Free Sign', sub: 'Sign anything and watch how the coach recognizes it, including the k-NN votes.' },
+  record: { eyebrow: 'Teacher tool', title: 'Add Samples', sub: 'For fluent signers: add extra correct examples for the coach to compare against.' },
+};
 
 /** Timer that hides the success animation (so a new one can cancel the old one). */
 let successTimer = null;
@@ -76,6 +85,12 @@ export function showScreen(screenName) {
 
   for (const mode of CAMERA_SCREENS) {
     byId('panel-' + mode).hidden = mode !== screenName;
+  }
+  if (isCameraScreen) {
+    const heading = CAMERA_HEADINGS[screenName];
+    byId('camera-eyebrow').textContent = heading.eyebrow;
+    byId('camera-title').textContent = heading.title;
+    byId('camera-sub').textContent = heading.sub;
   }
 
   // Mark the active nav button so screen readers (and CSS) know which page is open.
@@ -171,6 +186,23 @@ export function renderLetterGrid(container, options) {
 
     button.addEventListener('click', () => options.onPick(letter));
     container.append(button);
+  }
+}
+
+/**
+ * Draws the Home page artwork: the letters A, S, L as hand diagrams.
+ * (Drawn by our own diagram code, so no pictures need to be downloaded.)
+ * @param {HTMLElement} container - The hero art area.
+ * @returns {void}
+ */
+export function renderHeroArt(container) {
+  if (container.childElementCount > 0) {
+    return;
+  }
+  for (const letter of ['A', 'S', 'L']) {
+    const card = makeElement('div', 'hero-card');
+    card.append(createHandDiagram(letter), makeElement('span', '', letter));
+    container.append(card);
   }
 }
 
@@ -369,23 +401,25 @@ function makeSummaryCard(label, value) {
 /**
  * Fills in the Progress screen.
  * @param {Array<Object>} attempts - Saved attempts.
- * @param {number} bestSpellScore - Best Spell-a-Word score.
+ * @param {{easy:number, medium:number, hard:number}} bestScores - Best Challenge score per difficulty.
  * @returns {void}
  */
-export function renderProgress(attempts, bestSpellScore) {
+export function renderProgress(attempts, bestScores) {
   const overall = overallStats(attempts);
   const summary = byId('progress-summary');
   summary.replaceChildren(
     makeSummaryCard('Attempts', String(overall.total)),
     makeSummaryCard('Overall accuracy', overall.total > 0 ? formatPercent(overall.accuracy) : '-'),
     makeSummaryCard('Letters practiced', overall.lettersPracticed + ' / 24'),
-    makeSummaryCard('Best Spell score', String(bestSpellScore)),
+    makeSummaryCard('Best: Easy', String(bestScores.easy)),
+    makeSummaryCard('Best: Medium', String(bestScores.medium)),
+    makeSummaryCard('Best: Hard', String(bestScores.hard)),
   );
 
   const lettersBox = byId('progress-letters');
   const daysBox = byId('progress-days');
   if (attempts.length === 0) {
-    const note = 'No practice yet. Lock in letters in Learn mode or the Spell-a-Word game and your results will show up here.';
+    const note = 'No practice yet. Lock in letters in Learn, Spell, or Challenge and your results will show up here.';
     lettersBox.replaceChildren(makeElement('p', 'empty-note', note));
     daysBox.replaceChildren();
     return;

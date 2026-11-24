@@ -9,8 +9,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createSpellGame, submitLetter, currentTargetLetter, currentWord, goToNextWord,
-  timeLeftMs, isGameOver, chooseGameWords, POINTS_PER_LETTER, WORD_BONUS,
+  createChallengeGame, submitLetter, currentTargetLetter, currentWord, goToNextWord,
+  timeLeftMs, isGameOver, chooseGameWords, POINTS_PER_LETTER, WORD_BONUS, DIFFICULTIES, getDifficulty,
 } from '../js/games.js';
 import { makeAttempt, statsByLetter, statsByDay, overallStats, addAttempt, letterHistory } from '../js/progress.js';
 import {
@@ -43,7 +43,7 @@ function fakeSample(letter, id) {
 // ---------- Spell-a-Word game ----------
 
 test('spelling a word letter by letter scores points and a word bonus', () => {
-  const game = createSpellGame(['CAT', 'HI'], 0, 60000);
+  const game = createChallengeGame(['CAT', 'HI'], 0, 60000);
   assert.equal(currentTargetLetter(game), 'C');
   assert.equal(submitLetter(game, 'C', 1000).outcome, 'correct');
   assert.equal(submitLetter(game, 'X', 2000).outcome, 'wrong');
@@ -55,30 +55,46 @@ test('spelling a word letter by letter scores points and a word bonus', () => {
 });
 
 test('the game ends when time runs out', () => {
-  const game = createSpellGame(['HI'], 0, 60000);
+  const game = createChallengeGame(['HI'], 0, 60000);
   assert.equal(timeLeftMs(game, 59000), 1000);
   assert.equal(isGameOver(game, 60000), true);
   assert.equal(submitLetter(game, 'H', 61000).outcome, 'game-over');
 });
 
 test('skipping moves to the next word and the word list wraps around', () => {
-  const game = createSpellGame(['NO', 'OK'], 0, 60000);
+  const game = createChallengeGame(['NO', 'OK'], 0, 60000);
   goToNextWord(game);
   assert.equal(currentWord(game), 'OK');
   goToNextWord(game);
   assert.equal(currentWord(game), 'NO');
 });
 
-test('chooseGameWords only uses words made of recorded letters', () => {
-  const { words, usingPracticeWords } = chooseGameWords(['C', 'A', 'T', 'H', 'I'], () => 0.5);
-  assert.equal(usingPracticeWords, false);
-  assert.deepEqual([...words].sort(), ['CAT', 'HAT', 'HI']);
+test('chooseGameWords only uses known letters and the difficulty\'s word lengths', () => {
+  const easy = chooseGameWords(['C', 'A', 'T', 'H', 'I'], 'easy', () => 0.5);
+  assert.equal(easy.usingPracticeWords, false);
+  assert.deepEqual([...easy.words].sort(), ['AT', 'CAT', 'HAT', 'HI', 'IT']);
+
+  const allLetters = 'ABCDEFGHIKLMNOPQRSTUVWXY'.split('');
+  const hard = chooseGameWords(allLetters, 'hard', Math.random);
+  assert.ok(hard.words.every((word) => word.length >= 4 && word.length <= 6));
+  assert.ok(hard.words.every((word) => !word.includes('J') && !word.includes('Z')));
 });
 
 test('chooseGameWords makes practice words when no real word fits', () => {
-  const { words, usingPracticeWords } = chooseGameWords(['Q', 'X'], () => 0);
+  const { words, usingPracticeWords } = chooseGameWords(['Q', 'X'], 'medium', () => 0);
   assert.equal(usingPracticeWords, true);
   assert.equal(words[0], 'QQQ');
+});
+
+test('harder levels give less time, longer words, and more points per letter', () => {
+  assert.ok(DIFFICULTIES.easy.durationMs > DIFFICULTIES.medium.durationMs);
+  assert.ok(DIFFICULTIES.medium.durationMs > DIFFICULTIES.hard.durationMs);
+  assert.equal(DIFFICULTIES.hard.pictures, false);
+  assert.equal(getDifficulty('nonsense'), DIFFICULTIES.medium);
+
+  const game = createChallengeGame(['HI'], 0, 45000, DIFFICULTIES.hard.multiplier);
+  submitLetter(game, 'H', 1000);
+  assert.equal(game.score, POINTS_PER_LETTER * 3);
 });
 
 // ---------- Progress ----------
@@ -164,10 +180,15 @@ test('export then import round-trips, and merging skips duplicates', () => {
   const incoming = parseImportJson(makeExportJson({
     ...emptyData(),
     samples: [fakeSample('A', 'a1'), fakeSample('B', 'b1')],
-    bestSpellScore: 90,
+    bestScores: { easy: 10, medium: 90, hard: 0 },
   })).data;
   const merged = mergeData(current, incoming);
   assert.equal(merged.addedSamples, 1);
   assert.equal(merged.data.samples.length, 2);
-  assert.equal(merged.data.bestSpellScore, 90);
+  assert.deepEqual(merged.data.bestScores, { easy: 10, medium: 90, hard: 0 });
+});
+
+test('an old saved "bestSpellScore" becomes the Medium best score', () => {
+  const text = JSON.stringify({ samples: [fakeSample('A', 'a1')], bestSpellScore: 70 });
+  assert.equal(parseImportJson(text).data.bestScores.medium, 70);
 });
