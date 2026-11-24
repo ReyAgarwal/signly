@@ -57,7 +57,13 @@ const BONE_WIDTHS = {
 const FIRST_LANDMARK = { thumb: 1, index: 5, middle: 9, ring: 13, pinky: 17 };
 
 /** Thickness of the dark outline around every shape. */
-const OUTLINE_WIDTH = 0.13;
+const OUTLINE_WIDTH = 0.15;
+
+/** Farthest-away parts are mixed this much with gray, so depth is easier to see. */
+const MAX_DEPTH_SHADE = 0.22;
+
+/** The gray used for depth shading. */
+const SHADE_COLOR = '#64748b';
 
 /** The smallest picture size, so a fist isn't drawn giant next to an open hand. */
 const MIN_VIEW_SIZE = 9.6;
@@ -156,6 +162,16 @@ export function buildDiagramShapes(hand, options = {}) {
   const points = hand.landmarks;
   const shapes = [];
 
+  // Depth shading: find the nearest and farthest points, so each bone can be
+  // shaded by how far back it is (0 = nearest, 1 = farthest).
+  let nearest = -Infinity;
+  let farthest = Infinity;
+  for (const point of points) {
+    nearest = Math.max(nearest, point[2]);
+    farthest = Math.min(farthest, point[2]);
+  }
+  const depthRange = Math.max(nearest - farthest, 0.001);
+
   // The palm: wrist corners, thumb base, and the four knuckles.
   const palmCorners = [hand.wristThumbSide, points[1], points[5], points[9], points[13], points[17], hand.wristPinkySide];
   const palmDepth = averageDepth(palmCorners) - 0.05;
@@ -181,6 +197,7 @@ export function buildDiagramShapes(hand, options = {}) {
       const shape = {
         type: 'bone', finger, from: project(start3d, flipX), to: project(end3d, flipX),
         width: BONE_WIDTHS[finger][bone], depth, highlighted: finger === highlight,
+        shade: ((nearest - averageDepth([start3d, end3d])) / depthRange) * MAX_DEPTH_SHADE,
       };
       shapes.push(shape);
 
@@ -221,7 +238,7 @@ function makeMotionShape(points, motion, flipX) {
   for (const [dx, dy] of motion.path) {
     arrowPoints.push([start[0] + (motion.offset[0] + dx) * sign, start[1] + motion.offset[1] + dy]);
   }
-  return { type: 'motion', points: arrowPoints, curve: motion.path.length === 4 && motion.from === 20, depth: Infinity };
+  return { type: 'motion', points: arrowPoints, curve: motion.curve === true, depth: Infinity };
 }
 
 /**
@@ -264,13 +281,31 @@ function svgElement(tag, attributes) {
 }
 
 /**
+ * Mixes two colors, like mixing paint.
+ * @param {string} first - A color like "#bbf7d0".
+ * @param {string} second - Another color like "#64748b".
+ * @param {number} amount - 0 = all first color, 1 = all second color.
+ * @returns {string} The mixed color as "rgb(r, g, b)".
+ */
+export function mixColors(first, second, amount) {
+  const parts = [];
+  for (let i = 1; i <= 5; i += 2) {
+    // Each pair of hex digits is one channel (red, green, blue), 0 to 255.
+    const a = parseInt(first.slice(i, i + 2), 16);
+    const b = parseInt(second.slice(i, i + 2), 16);
+    parts.push(Math.round(a + (b - a) * amount));
+  }
+  return 'rgb(' + parts.join(', ') + ')';
+}
+
+/**
  * Draws one bone as a rounded line with an outline.
  * @param {SVGElement} svg - Where to draw.
  * @param {Object} shape - A 'bone' shape.
  * @returns {void}
  */
 function drawBone(svg, shape) {
-  let fill = DIAGRAM_COLORS[shape.finger];
+  let fill = mixColors(DIAGRAM_COLORS[shape.finger], SHADE_COLOR, shape.shade ?? 0);
   let outline = DIAGRAM_COLORS.outline;
   if (shape.highlighted) {
     fill = DIAGRAM_COLORS.highlightFill;
@@ -335,19 +370,25 @@ function drawMotion(svg, shape) {
   if (shape.curve) {
     pathData = 'M ' + text(p0) + ' C ' + text(p1) + ' ' + text(p2) + ' ' + text(p3);
   }
-  svg.append(svgElement('path', {
-    d: pathData, fill: 'none', stroke: DIAGRAM_COLORS.motion, 'stroke-width': 0.22,
-    'stroke-dasharray': '0.5 0.35', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+  // A thick white line underneath makes the arrow stand out even on top of the hand.
+  const line = { d: pathData, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+  svg.append(svgElement('path', { ...line, stroke: '#ffffff', 'stroke-width': 0.75 }));
+  svg.append(svgElement('path', { ...line, stroke: DIAGRAM_COLORS.motion, 'stroke-width': 0.36 }));
+
+  // Arrowhead: a triangle pointing along the last part of the path.
+  const angle = Math.atan2(p3[1] - p2[1], p3[0] - p2[0]);
+  const size = 1.1;
+  const tip = [p3[0] + 0.35 * Math.cos(angle), p3[1] + 0.35 * Math.sin(angle)];
+  const left = [tip[0] - size * Math.cos(angle - 0.55), tip[1] - size * Math.sin(angle - 0.55)];
+  const right = [tip[0] - size * Math.cos(angle + 0.55), tip[1] - size * Math.sin(angle + 0.55)];
+  svg.append(svgElement('polygon', {
+    points: [tip, left, right].map((p) => p[0].toFixed(3) + ',' + p[1].toFixed(3)).join(' '),
+    fill: DIAGRAM_COLORS.motion, stroke: '#ffffff', 'stroke-width': 0.18, 'stroke-linejoin': 'round',
   }));
 
-  // Arrowhead: a small triangle pointing along the last part of the path.
-  const angle = Math.atan2(p3[1] - p2[1], p3[0] - p2[0]);
-  const size = 0.7;
-  const left = [p3[0] - size * Math.cos(angle - 0.5), p3[1] - size * Math.sin(angle - 0.5)];
-  const right = [p3[0] - size * Math.cos(angle + 0.5), p3[1] - size * Math.sin(angle + 0.5)];
-  svg.append(svgElement('polygon', {
-    points: [p3, left, right].map((p) => p[0].toFixed(3) + ',' + p[1].toFixed(3)).join(' '),
-    fill: DIAGRAM_COLORS.motion,
+  // A dot shows where the movement STARTS.
+  svg.append(svgElement('circle', {
+    cx: p0[0], cy: p0[1], r: 0.42, fill: DIAGRAM_COLORS.motion, stroke: '#ffffff', 'stroke-width': 0.2,
   }));
 }
 
@@ -384,16 +425,23 @@ function poseFor(letter) {
  * Draws (or redraws) the diagram for a letter into an existing <svg>.
  * @param {SVGElement} svg - The SVG element to fill.
  * @param {string} letter - The letter, e.g. "B".
- * @param {{flipX?:boolean, highlightFinger?:string|null}} options
+ * @param {{flipX?:boolean, highlightFinger?:string|null, turn?:{yaw:number, pitch:number}}} options
  *   flipX = mirror the picture (for left-handed signers),
- *   highlightFinger = finger to draw in red.
+ *   highlightFinger = finger to draw in red,
+ *   turn = extra rotation in degrees when the user drags the picture to look around.
  * @returns {void}
  */
 export function renderHandDiagram(svg, letter, options = {}) {
   svg.replaceChildren();
-  const pose = poseFor(letter);
-  if (!pose) {
+  const basePose = poseFor(letter);
+  if (!basePose) {
     return;
+  }
+  let pose = basePose;
+  if (options.turn && (options.turn.yaw !== 0 || options.turn.pitch !== 0)) {
+    // Extra turns are added after the recipe's own view, like turning your head
+    // around a hand model. The movement arrow is hidden while turned (it's drawn flat).
+    pose = { ...basePose, view: [...(basePose.view ?? []), ['y', options.turn.yaw], ['x', options.turn.pitch]], motion: undefined };
   }
   const hand = buildHand(pose);
   const { shapes, viewBox } = buildDiagramShapes(hand, {
@@ -410,6 +458,45 @@ export function renderHandDiagram(svg, letter, options = {}) {
   }
   svg.setAttribute('aria-label', label);
   drawShapes(svg, shapes);
+}
+
+/**
+ * Lets the user drag a diagram to turn the 3D hand and see it from other sides.
+ * Double-clicking (or pressing the returned reset function) goes back to normal.
+ * @param {SVGElement} svg - The diagram to make draggable.
+ * @param {function({yaw:number, pitch:number}):void} redraw - Called with the new turn.
+ * @returns {function():void} A function that resets the turn to zero.
+ */
+export function enableDragToTurn(svg, redraw) {
+  const turn = { yaw: 0, pitch: 0 };
+  let dragStart = null;
+
+  svg.addEventListener('pointerdown', (event) => {
+    dragStart = { x: event.clientX, y: event.clientY, yaw: turn.yaw, pitch: turn.pitch };
+    svg.setPointerCapture(event.pointerId);
+  });
+  svg.addEventListener('pointermove', (event) => {
+    if (!dragStart) {
+      return;
+    }
+    // Half a degree per pixel dragged; looking up/down is limited to +-80 degrees.
+    turn.yaw = dragStart.yaw + (event.clientX - dragStart.x) * 0.5;
+    turn.pitch = Math.max(-80, Math.min(80, dragStart.pitch - (event.clientY - dragStart.y) * 0.5));
+    redraw(turn);
+  });
+  const stop = () => {
+    dragStart = null;
+  };
+  svg.addEventListener('pointerup', stop);
+  svg.addEventListener('pointercancel', stop);
+
+  const reset = () => {
+    turn.yaw = 0;
+    turn.pitch = 0;
+    redraw(turn);
+  };
+  svg.addEventListener('dblclick', reset);
+  return reset;
 }
 
 /**

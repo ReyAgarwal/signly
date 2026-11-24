@@ -16,8 +16,8 @@ import { LETTER_TIPS, LETTER_MIXUPS } from '../letters.js';
 import { parsePhrase, MOTION_LETTER_TIPS } from '../phrase.js';
 import { LetterSmoother, HintSmoother } from '../smoothing.js';
 import { findFingerToFix, hintMessage } from '../hints.js';
-import { renderHandDiagram } from '../diagram.js';
-import { byId, makeElement, setMeter, showSuccessBurst, formatPercent } from '../ui.js';
+import { renderHandDiagram, enableDragToTurn } from '../diagram.js';
+import { byId, makeElement, setMeter, showSuccessBurst, formatPercent, renderLetterPhotos } from '../ui.js';
 
 /** After moving to a new letter, give the user this long to change handshape. */
 const GET_READY_MS = 1000;
@@ -45,6 +45,7 @@ export function createSpellMode(app) {
   let advanceTimer = null;
   let shownDiagramKey = '';
   let keepMessageUntilMs = 0;
+  let turn = { yaw: 0, pitch: 0 };
 
   const input = byId('spell-input');
   const hintText = byId('spell-hint');
@@ -83,10 +84,10 @@ export function createSpellMode(app) {
   function showDiagram(highlightFinger) {
     // J and Z have their own diagrams, with an arrow showing the movement.
     const letter = steps[position].letter;
-    const key = letter + '|' + highlightFinger + '|' + app.settings.flipDiagrams;
+    const key = [letter, highlightFinger, app.settings.flipDiagrams, turn.yaw, turn.pitch].join('|');
     if (key !== shownDiagramKey) {
       shownDiagramKey = key;
-      renderHandDiagram(diagram, letter, { flipX: app.settings.flipDiagrams, highlightFinger });
+      renderHandDiagram(diagram, letter, { flipX: app.settings.flipDiagrams, highlightFinger, turn });
     }
   }
 
@@ -129,7 +130,8 @@ export function createSpellMode(app) {
     byId('spell-step').textContent = 'Letter ' + (position + 1) + ' of ' + steps.length;
     shownDiagramKey = '';
     showDiagram(null);
-    diagram.nextElementSibling.textContent = step.kind === 'motion' ? 'Start shape + movement' : 'How to make it';
+    renderLetterPhotos(byId('spell-photos'), step.letter, app.settings.flipDiagrams);
+    diagram.nextElementSibling.textContent = step.kind === 'motion' ? 'Start shape + movement' : 'Drag to turn the hand';
 
     if (step.kind === 'motion') {
       byId('spell-tip').textContent = MOTION_LETTER_TIPS[step.letter];
@@ -248,6 +250,13 @@ export function createSpellMode(app) {
     advanceTimer = setTimeout(() => completeCurrentLetter('done'), NEXT_LETTER_DELAY_MS);
   }
 
+  enableDragToTurn(diagram, (newTurn) => {
+    turn = { ...newTurn };
+    if (steps.length > 0 && !finished) {
+      showDiagram(null);
+    }
+  });
+
   byId('spell-form').addEventListener('submit', (event) => {
     // Stop the browser from reloading the page (the default for forms).
     event.preventDefault();
@@ -301,6 +310,7 @@ export function createSpellMode(app) {
       if (steps.length > 0 && !finished) {
         shownDiagramKey = '';
         showDiagram(null);
+        renderLetterPhotos(byId('spell-photos'), steps[position].letter, app.settings.flipDiagrams);
       }
     },
 

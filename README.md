@@ -21,10 +21,10 @@ signing, tells you which finger to fix, and tracks your progress over time.
 | Screen | What it does |
 |--------|--------------|
 | **Home** | Big buttons for every mode, a status line ("120 samples recorded for 4 letters..."), and a list of keyboard shortcuts |
-| **Alphabet** | A **diagram of all 26 letters**, with how-to text and a "Watch out" note about the letter it's most often confused with. **J and Z** are shown with a dashed arrow for their movement and marked "not checked by the coach yet" (the coach looks at one still picture at a time). Includes the finger color key. Click or type a letter to practice it; printable. |
+| **Alphabet** | **Study chart:** a **diagram and a real photo of all 26 letters**, with how-to text and a "Watch out" note about the letter it's most often confused with. **J and Z** are shown with a bold arrow (a dot marks where the movement starts) and marked "not checked by the coach yet" (the coach looks at one still picture at a time). Click or type a letter to practice it; printable. **Reading quiz:** "Which letter is this?" Shows a real signer's photo (or a diagram) and 4 choices, usually including look-alikes. No camera needed; reading fingerspelling is half the skill. |
 | **Free Sign** | Sign anything. Shows the recognized letter, the confidence %, the actual k-NN neighbor votes, and types out letters you hold steady. |
-| **Learn** | Pick a target letter. A **diagram** shows how to make it, next to a skeleton of the **average real signer's hand**. Live hints tell you which finger to fix and draw that finger in **red** on the camera *and* the diagram. Hold the right letter for half a second to get a success animation, then it moves to the next letter automatically (or press **Enter**). |
-| **Spell** | Type **any word or sentence** (your name, "Nice to meet you"...) and the coach teaches you to fingerspell it, letter by letter: diagram, tip, live finger hints, and a camera check that moves on when you get each letter right. J and Z (motion letters) get written instructions. |
+| **Learn** | Two ways to practice. **Whole alphabet:** go through A–Y one letter at a time (turn off "go to the next letter" to repeat the same letter; a counter shows how many times in a row you got it). **Practice set:** choose one letter or a few (or a quick pick: *my weakest letters*, or look-alike groups like M · N or A · S · T · E), how many times each, and mixed or in order; at the end a summary shows how many tries each letter took, with *Practice just the tricky ones*. For every letter: a **diagram you can drag to turn**, **two real photos**, the **average real signer's hand**, and live hints that draw the finger to fix in **red** on the camera *and* the diagram. |
+| **Spell** | Type **any word or sentence** (your name, "Nice to meet you"...) and the coach teaches you to fingerspell it, letter by letter: diagram, real photos, tip, live finger hints, and a camera check that moves on when you get each letter right. J and Z (motion letters) get a movement diagram and written instructions. |
 | **Challenge** | Timed game: spell as many words as you can. **Easy** (2–3 letters, 90 s), **Medium** (3–4 letters, 60 s, ×2 points), or **Hard** (4–6 letters, 45 s, ×3 points, no picture hints). Best score saved for each level. |
 | **Progress** | Accuracy for every letter, and for every day, so you can see improvement over time. |
 | **Test & Data** | **Fair accuracy test** (hides each person in turn and recognizes their signs using everyone else, shows per-person and per-letter accuracy and which letters get confused), what the coach knows (real signers / teacher-added / learned from you), the **keep learning** switch, **Export/Import**, and dataset credits. |
@@ -44,8 +44,8 @@ Your hands are busy signing, so most things work from the keyboard:
 | Where | Keys |
 |-------|------|
 | Anywhere | `1`–`8` open a screen (same order as the menu: Alphabet, Learn, Spell, Challenge, Free Sign, Progress, Test & Data, Add Samples) · `Esc` Home |
-| Alphabet | Type a letter to practice it in Learn (J and Z open Spell) |
-| Learn | `Enter` or `→` next letter · `←` previous letter · type a letter to jump to it |
+| Alphabet | Type a letter to practice it in Learn (J and Z open Spell) · in the Reading quiz: type a letter to answer, `Enter` next question |
+| Learn | `Enter` or `→` next letter (in a practice set: skip) · `←` previous letter · type a letter to jump to it |
 | Spell | `/` type a new phrase · `→` skip a letter · `←` go back a letter |
 | Challenge | `Enter` start / play again · `→` skip word |
 | Free Sign | `Space` add a space · `Backspace` delete · `Delete` clear |
@@ -65,16 +65,23 @@ bends are within the range real people use, thumb positions were fitted to the
 real data (except M, N, T, where the thumb is hidden from the camera and the ASL
 definition was used), and the coach recognizes 20 of the 24 drawings as the right
 letter. A unit test keeps it that way (`tests/diagram-accuracy.test.js`). P was later
-re-checked against photos of real signers (middle finger straight down, index slanting
-down and forward), after which the coach recognizes 21 of 24 drawings.
+redrawn to match photos of real signers (the K handshape with the hand pointing toward
+the camera: index up, middle finger down), after which the coach recognizes 21 of 24 drawings.
+
+You can **drag a diagram to turn the hand** in Learn and Spell (double-click to reset),
+and farther-away parts are shaded slightly darker so you can see what's in front.
 
 ### Where the "answer key" comes from
 
-`data/reference-hands.json` holds the 21 hand points (no photos) of about 6,000
+`data/reference-hands.json` holds the 21 hand points (numbers, not pictures) of about 6,000
 hands of real people signing the 24 static letters, made from two CC BY 4.0
 datasets on Mendeley Data. **Fair accuracy test** (each person hidden in turn):
 **76% overall**, from 54% to 88% depending on the person. `tools/README.md`
 explains every step and the results. Credits are in `data/ATTRIBUTION.md`.
+
+Next to each diagram the app also shows **two real photos** (`images/letters/`,
+from two different people in the first dataset), picked because their hand shape is
+the most typical, and mirrored where needed to match the right-hand diagrams.
 
 ---
 
@@ -164,6 +171,10 @@ js/
   hints.js                  FINGER ANGLES, letter templates, "curl your index finger" hints
   smoothing.js              MAJORITY VOTE + hold-0.5-seconds-to-lock
   games.js                  Challenge rules (word list, difficulty levels, timer, scoring)
+  drill.js                  Practice sets: repeat chosen letters, look-alike groups, summary
+  quiz.js                   Reading quiz questions (4 choices, mostly look-alikes)
+  quizScreen.js             Reading quiz on the Alphabet page
+  letterPhotos.js           Which real photo to show for each letter (and which are mirrored)
   phrase.js                 Turns typed text into letters to fingerspell (for Spell)
   facts.js                  "Did you know?" fun facts, shown without repeats
   progress.js               Accuracy-per-letter and per-day statistics
@@ -180,6 +191,7 @@ js/
   learning.js               "Keep learning" safety rules (only learn when real signers agree)
 
 data/reference-hands.json   ~6,000 real signers' hands (numbers only), from 2 CC BY 4.0 datasets
+images/letters/             52 real photos (2 per letter), CC BY 4.0, listed in js/letterPhotos.js
 data/ATTRIBUTION.md         Dataset credits and what we changed
 tools/                      How the reference data was built + the diagram checker (not needed to run the app)
   modes/recordMode.js       Add Samples screen (optional teacher tool)
@@ -204,7 +216,7 @@ models/                     Hand landmark model
 - The webcam video is processed **on the laptop only** and is never saved or sent anywhere.
 - When a sign is learned (or added on Add Samples), the app saves just **63 numbers** (21 hand points × x, y, z), not a picture.
 - Data lives in the browser's localStorage. **Test & Data → Delete added + learned samples and progress** erases it.
-- The real-signer reference contains only hand-point numbers, never photos or names.
+- The real-signer reference contains only hand-point numbers. The 52 letter photos show only hands, and no names.
 - We use MediaPipe **0.10.35**, the newest version that sends no usage metrics to Google
   (version 1.x and later do). See `vendor/mediapipe/README.md`.
 

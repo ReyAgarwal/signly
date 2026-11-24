@@ -1,7 +1,7 @@
 # Data attribution
 
 `reference-hands.json` contains **numbers derived from photos** in the two datasets
-below. Both are licensed under the
+below, and `images/letters/` contains **52 photos** from dataset 1. Both are licensed under the
 [Creative Commons Attribution 4.0 International license (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/),
 which allows reuse and adaptation with credit.
 
@@ -16,7 +16,13 @@ which allows reuse and adaptation with credit.
 **Changes we made:** we sampled about 9,000 of the photos, ran Google MediaPipe Hand
 Landmarker on them, kept only the 21 hand points of each hand that was found,
 normalized them (wrist at the origin, palm size 1, left hands mirrored), rounded to
-2 decimals, and kept at most 50 per letter per person. **No photos are included.**
-See `tools/README.md` for every step.
+2 decimals, and kept at most 50 per letter per person. See `tools/README.md` for every step.
 
-`reference-hands.json` is shared under the same CC BY 4.0 license.
+**Letter photos (`images/letters/`):** two photos per letter (A–Z), each from a
+different person in dataset 1. Changes we made: picked the most typical photo of
+each person (`tools/rank-photos.mjs`), cropped around the hand, resized so the
+longest side is 260 pixels, saved as JPEG, and **mirrored some left-right** so they
+match the app's right-hand diagrams (`tools/orient-photos.mjs`; which ones is listed
+in `js/letterPhotos.js`). The photos show only hands.
+
+`reference-hands.json` and the letter photos are shared under the same CC BY 4.0 license.

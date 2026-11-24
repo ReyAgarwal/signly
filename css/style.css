@@ -798,7 +798,7 @@ kbd {
 
 .summary-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -1269,7 +1269,7 @@ kbd {
 
 .alphabet-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
   gap: 16px;
   margin-top: 14px;
 }
@@ -2009,4 +2009,470 @@ kbd {
   .alphabet-card .card-status {
     display: none;
   }
+}
+
+/* ---------- Learn: whole alphabet vs practice set ---------- */
+
+.segmented.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.practice-switch-card {
+  display: grid;
+  gap: 14px;
+}
+
+.set-setup .label {
+  margin-bottom: 6px;
+}
+
+.set-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  margin: 12px 0;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.stepper strong {
+  min-width: 1.6em;
+  font-size: 1.3rem;
+  text-align: center;
+  color: var(--ink);
+}
+
+.stepper-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stepper-button:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.set-running {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.set-running .meter {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.set-running .label {
+  margin: 0;
+}
+
+.set-progress {
+  margin: 2px 0 0;
+  font-size: 1.1rem;
+  font-weight: 750;
+}
+
+.summary-title {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.summary-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.summary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.summary-row strong {
+  font-size: 1.5rem;
+}
+
+.summary-row.good {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.summary-row.tricky {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.good-chip {
+  background: #dcfce7;
+  color: var(--good);
+}
+
+/* ---------- Real-signer photos ---------- */
+
+.photo-figure {
+  margin: 0;
+  text-align: center;
+}
+
+.letter-photos {
+  display: flex;
+  gap: 8px;
+}
+
+.letter-photo {
+  display: block;
+  width: 104px;
+  height: 130px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+/* Left-handed mode mirrors the photos, just like the diagrams. */
+.letter-photo.flipped {
+  transform: scaleX(-1);
+}
+
+.photo-credit {
+  margin-top: 4px;
+  max-width: 216px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.alphabet-card .card-photo .letter-photo {
+  width: 72px;
+  height: 92px;
+}
+
+/* A diagram you can drag to turn shows a "grab" hand cursor. */
+.hand-diagram.turnable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.hand-diagram.turnable:active {
+  cursor: grabbing;
+}
+
+/* ---------- Alphabet: tabs + reading quiz ---------- */
+
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  margin: 0;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.tabs button {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tabs button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--brand-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.quiz-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.quiz-head .count-text {
+  margin: 4px 0 0;
+}
+
+.quiz-score {
+  display: flex;
+  gap: 8px;
+}
+
+.quiz-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.quiz-picture {
+  display: grid;
+  place-items: center;
+  width: 260px;
+  height: 300px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.quiz-picture .letter-photo {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  object-fit: contain;
+}
+
+.quiz-picture .quiz-diagram {
+  width: 240px;
+  height: 240px;
+  border: none;
+}
+
+.quiz-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 360px;
+}
+
+.quiz-choice {
+  padding: 18px 0;
+  border-radius: 16px;
+  border: 2px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 2.2rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.quiz-choice:hover:not(:disabled) {
+  border-color: var(--brand);
+  transform: translateY(-2px);
+}
+
+.quiz-choice:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.quiz-choice.right {
+  opacity: 1;
+  border-color: var(--good);
+  background: #dcfce7;
+  color: var(--good);
+}
+
+.quiz-choice.wrong {
+  opacity: 1;
+  border-color: var(--bad);
+  background: #fee2e2;
+  color: var(--bad);
+}
+
+@media (max-width: 640px) {
+  .quiz-body {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-picture {
+    width: 100%;
+  }
+}
+
+/* ---------- Fitting the camera screens on a laptop screen ---------- */
+
+/* One short heading line instead of three, so the coaching is above the fold. */
+#screen-camera .page-head.compact {
+  margin: 0 0 12px;
+}
+
+#screen-camera .page-head.compact > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+}
+
+#screen-camera .page-head.compact h1 {
+  font-size: 1.55rem;
+}
+
+#screen-camera .page-head.compact .eyebrow {
+  flex-basis: 100%;
+}
+
+@media (min-width: 981px) {
+  /* The video's width is chosen from the WINDOW HEIGHT: a 4:3 video that is
+     (window height - 420px) tall still leaves room for the finger color key
+     below it, so nothing important needs scrolling. */
+  .camera-layout {
+    grid-template-columns: min(55%, max(380px, calc((100vh - 420px) * 4 / 3))) minmax(0, 1fr);
+  }
+}
+
+.camera-note {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+}
+
+.key-card.compact {
+  margin-top: 10px;
+  padding: 10px 14px;
+}
+
+.key-card.compact .finger-key {
+  width: 175px;
+  height: 145px;
+}
+
+/* The practice switch is a slim bar, not a big card. */
+.practice-switch-card {
+  padding: 12px;
+}
+
+.segmented.two button {
+  flex-direction: row;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 10px;
+  font-size: 1rem;
+}
+
+/* In Learn and Spell, the two photos stack beside the diagram. */
+.learn-target .letter-photos {
+  flex-direction: column;
+}
+
+.learn-target .letter-photo {
+  width: 112px;
+  height: 101px;
+}
+
+.learn-target .photo-credit {
+  max-width: 112px;
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
+.learn-target {
+  gap: 14px;
+}
+
+.coach-card .feedback-box {
+  margin: 12px 0 10px;
+}
+
+/* Hint on the left, the real signers' average hand on the right. */
+.feedback-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 16px;
+  align-items: center;
+}
+
+.feedback-box > .hint,
+.feedback-box > .meter {
+  grid-column: 1;
+}
+
+.feedback-box > .feedback-meta {
+  display: contents;
+}
+
+.feedback-box .reference {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+
+.feedback-box #reference-canvas {
+  width: 96px;
+  height: 96px;
+}
+
+.feedback-box .reference figcaption {
+  max-width: 96px;
+  font-size: 0.72rem;
+}
+
+.learn-target .hand-diagram.large {
+  width: 228px;
+  height: 228px;
+}
+
+.learn-target .letter-photo {
+  height: 110px;
+}
+
+.summary-rows {
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+}
+
+.feedback-box .count-text {
+  grid-column: 1;
+}
+
+/* Alphabet cards: the letter sits as a badge on the diagram's corner, so the
+   diagram and the photo get the whole width. */
+.alphabet-card .card-top {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.alphabet-card .card-letter {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  font-size: 1.55rem;
+  z-index: 1;
+}
+
+.alphabet-card .hand-diagram {
+  width: 100%;
+  max-width: 150px;
+  height: 140px;
+  justify-self: center;
+}
+
+.alphabet-card .card-photo .letter-photo {
+  width: 84px;
+  height: 120px;
 }

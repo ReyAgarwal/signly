@@ -33,6 +33,10 @@ test('typing a letter picks it (lowercase works too); J and Z only on the Alphab
   assert.equal(shortcutFor(press('z'), 'alphabet'), 'pick:Z');
 });
 
+test('Enter on the Alphabet page means "next question" (for the reading quiz)', () => {
+  assert.equal(shortcutFor(press('Enter'), 'alphabet'), 'next-question');
+});
+
 test('number keys and Esc switch screens from anywhere', () => {
   assert.equal(shortcutFor(press('1'), 'home'), 'go:alphabet');
   assert.equal(shortcutFor(press('2'), 'spell'), 'go:learn');

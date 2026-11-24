@@ -367,8 +367,23 @@ credits in `data/ATTRIBUTION.md`). We ran the same MediaPipe the app uses on
 about 9,000 of the photos, kept the 21 hand points of each hand it found,
 normalized them exactly like the app does, and kept at most 50 per letter per
 person so nobody dominates. Result: **6,036 hands, about 250 per letter, from at
-least 4 different people**. Only numbers are stored, never photos. `tools/README.md`
+least 4 different people**. The answer key stores only numbers. `tools/README.md`
 shows every step.
+
+### The letter photos (images/letters/, js/letterPhotos.js)
+
+Next to each diagram the app shows two **real photos** from the first dataset,
+from two different people. Which photo? For each person we picked the most
+**typical** one: the photo whose hand is closest (smallest k-NN distance, on
+average) to every *other* person's hands for that letter. That avoids showing
+someone's unusual version of a letter (`tools/rank-photos.mjs`).
+
+Some people in the photos signed with their left hand or were photographed
+from the other side, so a few photos are **mirrored** to match the right-hand
+diagrams. MediaPipe's "Left"/"Right" label was often wrong on tightly cropped
+photos, so instead we compared each photo's 21 points with the diagram's 21
+points, as-is and flipped, after turning them to the best-matching angle
+(a "Procrustes" fit), and kept whichever matched better (`tools/orient-photos.mjs`).
 
 ## The fair accuracy test: "leave one person out" (classifier.js → evaluateUnseenPeople)
 
@@ -483,6 +498,11 @@ The result is 21 points in the **same order MediaPipe uses**, so the same
   tell the back of the hand from the palm.
 - Colors match the live skeleton (thumb yellow, index green, middle blue,
   ring purple, pinky teal), and the finger a hint is about turns **red**.
+- **Depth shading:** parts that are farther away are mixed with a little gray
+  (up to 22%), so you can see which fingers are in front.
+- **Drag to turn:** in Learn and Spell you can drag the diagram to look at the
+  hand from other sides. Dragging adds two extra rotations (left-right and
+  up-down) after the recipe's own view; double-click resets.
 
 ### 4. Checking the diagrams against real signers (tools/fit-diagrams.mjs)
 
@@ -495,15 +515,45 @@ the average of the real signers:
   spots and kept the one whose distances to the fingertips and knuckles best
   match the real signers. For M, N, and T the thumb is hidden under the
   fingers, so MediaPipe has to guess where it is; those follow the ASL definition.
-- **Direction:** the real data showed X is turned the same way as C, and
-  photos of real signers showed that in P the **middle finger points straight
-  down** while the **index slants down and forward**, so we fixed those.
+- **Direction:** the real data showed X is turned the same way as C. P was
+  redrawn after comparing with photos of real signers: it's the K handshape with
+  the whole hand **pointing toward the camera**, so from the front the **index
+  points up and the middle finger points down**, about 90° apart, with the thumb
+  touching the middle finger between them.
 - **Final check:** the coach (trained on real signers) recognizes **21 of the
   24 drawings** as the right letter. The 3 it misses are N, S, and T: the same
   fist letters it mixes up for real people.
-- **J and Z** get a diagram of their starting handshape plus a dashed arrow
-  (an SVG "path") showing the movement. The coach can't check them yet.
+- **J and Z** get a diagram of their starting handshape plus a **bold arrow**
+  (an SVG "path") showing the movement: a dot marks where the fingertip starts,
+  a white edge keeps the arrow visible on top of the hand, and the J hook is a
+  smooth curve (a "cubic Bézier"). The coach can't check them yet.
 
 `tests/diagram-accuracy.test.js` re-checks this every time the tests run, so a
 change that makes a diagram drift away from real signing will fail.
 **Still recommended:** have an ASL teacher look at the diagrams too.
+
+---
+
+## Practice sets (drill.js)
+
+Going through the alphabet in order is good for a first pass, but learners
+mostly need **more repetitions of the letters they get wrong**. A practice set:
+
+1. You choose letters (or a quick pick like "M · N" or "my weakest letters",
+   which comes from `lettersToPractice` in progress.js) and how many times each.
+2. `buildDrillQueue` makes the list. "Mix up the order" shuffles the letters
+   **one round at a time** (every letter once per round), and if a round would
+   start with the letter the last round ended on, it swaps the first two. So you
+   never sign the same letter twice in a row, which forces you to really switch
+   handshapes (that's what builds memory, not holding one shape).
+3. A letter only moves on after a **correct** sign; wrong signs count as extra tries.
+4. At the end, `summarizeDrill` shows tries per letter, and "Practice just the
+   tricky ones" starts a new set with only the letters that took extra tries.
+
+## Reading quiz (quiz.js)
+
+Fingerspelling has two halves: **signing** and **reading**. The quiz shows a
+real photo (or a diagram) and 4 letters. `makeQuestion` picks up to 2 wrong
+choices from the answer's look-alike group (for example N for M), then fills the
+rest randomly, so the quiz practices exactly the differences people confuse.
+

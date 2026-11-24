@@ -19,3 +19,5 @@ asl-coach-data-*.json
 tools/photos/
 tools/*-wanted.json
 tools/landmarks*.json
+tools/photo-candidates.json
+tools/photo-orientation.json

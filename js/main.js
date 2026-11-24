@@ -31,6 +31,7 @@ import { shouldLearn, addLearnedSample, countBySource } from './learning.js';
 import { STATIC_LETTERS, isMotionLetter } from './letters.js';
 import { addAttempt, makeAttempt, practiceStreak, lettersToPractice } from './progress.js';
 import { FactDeck } from './facts.js';
+import { createQuiz } from './quizScreen.js';
 import { renderFingerKey } from './diagram.js';
 import {
   loadData, saveData, emptyData, makeExportJson, parseImportJson, mergeData, loadSettings, saveSettings, makeSampleId,
@@ -84,6 +85,7 @@ const app = {
   setBestScore: setBestScore,
   recognize: recognize,
   masteredLetters: listMasteredLetters,
+  weakestLetters: listWeakestLetters,
   setSetting: setSetting,
   openRecord: (letter) => openModeWithLetter('record', letter),
 };
@@ -102,6 +104,7 @@ let noHandMessageShowing = false;
 let detectionErrorShown = false;
 let currentScreen = 'home';
 let modes = {};
+let quiz = null;
 const facts = new FactDeck();
 
 // ---------- Data helpers ----------
@@ -227,6 +230,16 @@ function listMasteredLetters() {
     }
   }
   return letters;
+}
+
+/**
+ * Lists the user's weakest letters (tried, and under 80% correct), weakest first.
+ * @param {number} count - How many to return at most.
+ * @returns {string[]} The letters.
+ */
+function listWeakestLetters(count) {
+  const tried = new Set(app.data.attempts.map((attempt) => attempt.letter));
+  return lettersToPractice(app.data.attempts, STATIC_LETTERS, 24).filter((letter) => tried.has(letter)).slice(0, count);
 }
 
 /**
@@ -672,6 +685,27 @@ function renderAlphabet() {
 }
 
 /**
+ * Switches the Alphabet page between the study chart and the reading quiz.
+ * @param {'chart'|'quiz'} tab - Which tab to show.
+ * @returns {void}
+ */
+function showAlphabetTab(tab) {
+  const isQuiz = tab === 'quiz';
+  byId('alphabet-tab-chart').setAttribute('aria-selected', String(!isQuiz));
+  byId('alphabet-tab-quiz').setAttribute('aria-selected', String(isQuiz));
+  byId('alphabet-chart-view').hidden = isQuiz;
+  // The quiz doesn't need the color key or the print button, so it fits on screen.
+  byId('alphabet-intro').hidden = isQuiz;
+  byId('alphabet-print').hidden = isQuiz;
+  byId('alphabet-quiz-view').hidden = !isQuiz;
+  if (isQuiz) {
+    quiz.show();
+  } else {
+    quiz.hide();
+  }
+}
+
+/**
  * Fills in the Progress screen (with the streak and "practice next" letters).
  * @returns {void}
  */
@@ -825,6 +859,14 @@ function onKeyDown(event) {
     window.location.hash = action.slice(3);
     return;
   }
+  if (currentScreen === 'alphabet' && quiz.isOpen()) {
+    if (action.startsWith('pick:')) {
+      quiz.answer(action.slice(5));
+    } else if (action === 'next-question') {
+      quiz.next();
+    }
+    return;
+  }
   if (currentScreen === 'alphabet' && action.startsWith('pick:')) {
     openLetterFromAlphabet(action.slice(5));
     return;
@@ -862,6 +904,8 @@ function setUpEventListeners() {
   for (const button of document.querySelectorAll('.hand-switch button')) {
     button.addEventListener('click', () => setHand(button.dataset.hand));
   }
+  byId('alphabet-tab-chart').addEventListener('click', () => showAlphabetTab('chart'));
+  byId('alphabet-tab-quiz').addEventListener('click', () => showAlphabetTab('quiz'));
   for (const slot of document.querySelectorAll('[data-fact-slot]')) {
     slot.querySelector('.fact-next').addEventListener('click', () => showFact(slot, facts.next()));
   }
@@ -938,6 +982,7 @@ async function start() {
     record: createRecordMode(app),
   };
 
+  quiz = createQuiz(app);
   setUpEventListeners();
   showHandSwitch();
   renderFingerKey(byId('camera-key'), { flipX: app.settings.flipDiagrams });

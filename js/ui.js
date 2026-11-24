@@ -14,6 +14,7 @@
 import { STATIC_LETTERS, ALPHABET, LETTER_TIPS, LETTER_MIXUPS, isMotionLetter } from './letters.js';
 import { statsByLetter, statsByDay, letterHistory, overallStats } from './progress.js';
 import { createHandDiagram } from './diagram.js';
+import { LETTER_PHOTOS } from './letterPhotos.js';
 
 /** Screens that use the webcam. */
 export const CAMERA_SCREENS = ['learn', 'spell', 'challenge', 'free', 'record'];
@@ -152,10 +153,11 @@ export function setMeter(fillElement, fraction) {
  * Builds a grid of letter buttons (A, B, C, ... Y).
  * @param {HTMLElement} container - Where to put the buttons.
  * @param {{counts:Object<string,number>, selected:string|null, onPick:function(string):void,
- *   showCounts?:boolean, mastered?:Set<string>}} options
+ *   showCounts?:boolean, mastered?:Set<string>, pressed?:Set<string>}} options
  *   counts = samples per letter, selected = highlighted letter,
  *   onPick = called with the letter when clicked, showCounts = show the sample count,
- *   mastered = letters signed correctly before (they get a check mark).
+ *   mastered = letters signed correctly before (they get a check mark),
+ *   pressed = several highlighted letters at once (for choosing a practice set).
  * @returns {void}
  */
 export function renderLetterGrid(container, options) {
@@ -165,7 +167,8 @@ export function renderLetterGrid(container, options) {
     const count = options.counts[letter] ?? 0;
     const button = makeElement('button', 'letter-button');
     button.type = 'button';
-    button.setAttribute('aria-pressed', String(letter === options.selected));
+    const isPressed = options.pressed ? options.pressed.has(letter) : letter === options.selected;
+    button.setAttribute('aria-pressed', String(isPressed));
     button.append(makeElement('span', '', letter));
     let label = letter + ', ' + count + ' samples';
 
@@ -234,6 +237,9 @@ export function renderAlphabetChart(container, options) {
     const top = makeElement('div', 'card-top');
     top.append(makeElement('span', 'card-letter', letter));
     top.append(createHandDiagram(letter, { flipX: options.flipX }));
+    const photo = makeElement('div', 'card-photo');
+    renderLetterPhotos(photo, letter, options.flipX, 1);
+    top.append(photo);
     card.append(top);
 
     // J and Z move, so the coach can't check them yet: say so on the card.
@@ -249,6 +255,25 @@ export function renderAlphabetChart(container, options) {
 
     card.addEventListener('click', () => options.onPick(letter));
     container.append(card);
+  }
+}
+
+/**
+ * Shows the real-signer photos of a letter (from letterPhotos.js).
+ * @param {HTMLElement} container - Where to put the photos.
+ * @param {string} letter - The letter.
+ * @param {boolean} flipX - True to mirror the photos (left-handed mode), like the diagrams.
+ * @param {number} limit - How many photos to show at most.
+ * @returns {void}
+ */
+export function renderLetterPhotos(container, letter, flipX = false, limit = 2) {
+  container.replaceChildren();
+  for (const photo of (LETTER_PHOTOS[letter] ?? []).slice(0, limit)) {
+    const image = makeElement('img', flipX ? 'letter-photo flipped' : 'letter-photo');
+    image.src = photo.src;
+    image.alt = 'Photo of a real signer making the letter ' + letter;
+    image.loading = 'lazy';
+    container.append(image);
   }
 }
 

@@ -5,7 +5,8 @@
  * (your hands are busy signing!).
  *
  *   Anywhere:     1-8 = open a screen, Esc = Home
- *   Alphabet:     type a letter = practice it in Learn (J and Z open Spell)
+ *   Alphabet:     type a letter = practice it in Learn (J and Z open Spell);
+ *                 in the reading quiz, type a letter = answer, Enter = next question
  *   Learn:        Enter or → = next letter, ← = previous letter, type a letter = pick it
  *   Spell:        / = type a new phrase, → = skip this letter, ← = go back a letter
  *   Challenge:    Enter = start / play again, → = skip word
@@ -33,6 +34,7 @@ export const SCREEN_NUMBER_KEYS = {
 
 /** Shortcuts that only work on one screen: screen -> key -> action. */
 const SCREEN_SHORTCUTS = {
+  alphabet: { Enter: 'next-question' },
   record: { ' ': 'record', Enter: 'record', ArrowRight: 'next-letter', ArrowLeft: 'previous-letter' },
   learn: { Enter: 'next-letter', ArrowRight: 'next-letter', ArrowLeft: 'previous-letter' },
   free: { ' ': 'space', Backspace: 'backspace', Delete: 'clear' },
