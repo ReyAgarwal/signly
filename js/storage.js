@@ -264,14 +264,24 @@ export const DEFAULT_SETTINGS = {
   flipDiagrams: false,
   autoAdvance: true,
   spellPictureHints: true,
-  showPhotos: true,
+  // Photos of real signers: 'off' by default, because the labeled diagrams
+  // are clearer for most learners. (A text value, so an older saved "true"
+  // from before this change doesn't turn them back on.)
+  photos: 'off',
+  quickStartSeen: false,
+};
+
+/** Settings that must be one of a fixed list of values. */
+const ALLOWED_VALUES = {
+  challengeDifficulty: ['easy', 'medium', 'hard'],
+  photos: ['on', 'off'],
 };
 
 /**
  * Loads settings, filling in defaults for anything missing or broken.
  * @param {Storage|null} storage - Where to load from (defaults to the browser's localStorage).
  * @returns {{challengeDifficulty:string, keepLearning:boolean, flipDiagrams:boolean, autoAdvance:boolean,
- *   spellPictureHints:boolean, showPhotos:boolean}} The settings.
+ *   spellPictureHints:boolean, photos:string, quickStartSeen:boolean}} The settings.
  */
 export function loadSettings(storage = getBrowserStorage()) {
   const settings = { ...DEFAULT_SETTINGS };
@@ -281,10 +291,11 @@ export function loadSettings(storage = getBrowserStorage()) {
   try {
     const saved = JSON.parse(storage.getItem(SETTINGS_KEY) ?? '{}');
     // Only copy settings we know about, and only if they're the right type
-    // (and, for the difficulty, one of the real levels).
+    // (and, for settings with a fixed list of values, one of those values).
     for (const name of Object.keys(DEFAULT_SETTINGS)) {
       const sameType = typeof saved[name] === typeof DEFAULT_SETTINGS[name];
-      if (sameType && (name !== 'challengeDifficulty' || ['easy', 'medium', 'hard'].includes(saved[name]))) {
+      const allowed = !ALLOWED_VALUES[name] || ALLOWED_VALUES[name].includes(saved[name]);
+      if (sameType && allowed) {
         settings[name] = saved[name];
       }
     }

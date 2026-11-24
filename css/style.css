@@ -834,34 +834,6 @@ kbd {
 }
 
 /* Finger color key */
-.key-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.key-card.compact {
-  margin-top: 14px;
-  padding: 14px 16px;
-}
-
-.finger-key {
-  display: block;
-  width: 230px;
-  height: 190px;
-  flex-shrink: 0;
-}
-
-.key-card.compact .finger-key {
-  width: 200px;
-  height: 165px;
-}
-
-.key-title {
-  margin: 0 0 4px;
-  font-weight: 800;
-}
-
 .text-bad {
   color: var(--bad);
 }
@@ -1196,7 +1168,7 @@ kbd {
 
 .alphabet-intro {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
 }
@@ -2291,16 +2263,6 @@ kbd {
   font-size: 0.8rem;
 }
 
-.key-card.compact {
-  margin-top: 10px;
-  padding: 10px 14px;
-}
-
-.key-card.compact .finger-key {
-  width: 175px;
-  height: 145px;
-}
-
 /* The practice switch is a slim bar, not a big card. */
 .practice-switch-card {
   padding: 12px;
@@ -2584,18 +2546,12 @@ kbd {
   }
 }
 
-/* Phones: the header scrolls away instead of covering a third of the screen,
-   and the color key puts its words under the picture instead of squeezing them. */
+/* Phones: the header scrolls away instead of covering a third of the screen. */
 @media (max-width: 640px) {
   .topbar {
     position: static;
   }
 
-  .key-card,
-  .key-card.compact {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 
 /* Photos Off: hide every photo, and let the diagram use the space. */
@@ -2613,3 +2569,182 @@ body.hide-photos .alphabet-card .card-top {
   grid-template-columns: minmax(0, 170px);
   justify-content: center;
 }
+
+/* ===================== Photos Off (the default) =====================
+   Without photos, the diagram sits BESIDE the letter and the steps, so the
+   whole lesson (and the live hint under it) fits higher up on the screen. */
+
+body.hide-photos .lesson-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  grid-template-areas: "pictures head";
+  gap: 18px;
+  align-items: center;
+}
+
+body.hide-photos .lesson-head {
+  grid-area: head;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px 14px;
+  align-items: center;
+}
+
+/* "contents" lets the meta line and the steps join the grid above directly. */
+body.hide-photos .lesson-text {
+  display: contents;
+}
+
+body.hide-photos .lesson-meta {
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 0;
+}
+
+body.hide-photos .letter-steps {
+  grid-column: 1 / -1;
+}
+
+body.hide-photos .picture-row {
+  grid-area: pictures;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 0;
+}
+
+/* A narrow card: back to letter + steps on top, diagram underneath. */
+@container (max-width: 520px) {
+  body.hide-photos .lesson-top {
+    display: block;
+  }
+
+  body.hide-photos .lesson-head {
+    display: flex;
+  }
+
+  body.hide-photos .lesson-text {
+    display: block;
+  }
+
+  body.hide-photos .lesson-meta {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  body.hide-photos .picture-row {
+    margin-top: 14px;
+  }
+}
+
+/* ---------- Finger color note under the video ---------- */
+
+.color-dots {
+  display: inline-flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.color-dots i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* The same colors as the live skeleton (FINGER_COLORS in draw.js). */
+.color-dots .dot-thumb { background: #f59e0b; }
+.color-dots .dot-index { background: #22c55e; }
+.color-dots .dot-middle { background: #38bdf8; }
+.color-dots .dot-ring { background: #a78bfa; }
+.color-dots .dot-pinky { background: #2dd4bf; }
+
+.camera-note + .camera-note {
+  margin-top: 4px;
+}
+
+.camera-note .color-dots {
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+/* ---------- Quick start (first visit to a camera screen) ---------- */
+
+.quick-start {
+  margin-bottom: 16px;
+  border-color: var(--brand-soft-2);
+  background: linear-gradient(135deg, #eef2ff, #ffffff 60%);
+}
+
+.quick-start-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quick-start .card-title {
+  margin: 0;
+}
+
+.quick-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px 22px;
+  margin: 12px 0;
+  padding-left: 0;
+  line-height: 1.4;
+}
+
+/* Room on the left of each step for its number (so numbers never bump into
+   the step before them). */
+.quick-steps li {
+  margin-left: 1.4em;
+}
+
+.quick-steps li::marker {
+  font-weight: 800;
+  color: var(--brand);
+}
+
+.button.small-button {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+}
+
+.help-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+#screen-camera .page-head.compact {
+  align-items: center;
+}
+
+/* ---------- Menu: show the words under the icons on laptop screens ---------- */
+
+@media (min-width: 1101px) and (max-width: 1360px) {
+  .nav button {
+    flex-direction: column;
+    gap: 2px;
+    padding: 5px 9px;
+    font-size: 0.72rem;
+  }
+
+  .nav button span {
+    display: inline;
+  }
+}
+
+/* The Home "start in 3 steps" cards have a button at the bottom. */
+.step .button {
+  margin-top: 10px;
+}
+

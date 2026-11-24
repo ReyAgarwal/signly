@@ -32,7 +32,6 @@ import { STATIC_LETTERS, isMotionLetter } from './letters.js';
 import { addAttempt, makeAttempt, practiceStreak, lettersToPractice } from './progress.js';
 import { FactDeck } from './facts.js';
 import { createQuiz } from './quizScreen.js';
-import { renderFingerKey } from './diagram.js';
 import {
   loadData, saveData, emptyData, makeExportJson, parseImportJson, mergeData, loadSettings, saveSettings, makeSampleId,
 } from './storage.js';
@@ -288,7 +287,7 @@ function setHand(hand) {
  * @returns {void}
  */
 function setPhotos(show) {
-  setSetting('showPhotos', show);
+  setSetting('photos', show ? 'on' : 'off');
   showPhotoSwitch();
   quiz.redraw();
 }
@@ -299,11 +298,11 @@ function setPhotos(show) {
  * @returns {void}
  */
 function showPhotoSwitch() {
-  const current = app.settings.showPhotos ? 'show' : 'hide';
+  const current = app.settings.photos === 'on' ? 'show' : 'hide';
   for (const button of document.querySelectorAll('.photo-switch button')) {
     button.setAttribute('aria-checked', String(button.dataset.photos === current));
   }
-  document.body.classList.toggle('hide-photos', !app.settings.showPhotos);
+  document.body.classList.toggle('hide-photos', app.settings.photos !== 'on');
 }
 
 /**
@@ -323,8 +322,6 @@ function showHandSwitch() {
  */
 function refreshDiagrams() {
   const flipX = app.settings.flipDiagrams;
-  renderFingerKey(byId('camera-key'), { flipX });
-  renderFingerKey(byId('alphabet-key'), { flipX });
   if (currentScreen === 'home') {
     renderHeroArt(byId('hero-art'), flipX);
   }
@@ -769,6 +766,8 @@ function goTo(screenName) {
   showScreen(screenName);
 
   if (CAMERA_SCREENS.includes(screenName)) {
+    // The first time someone opens a camera screen, show the quick start tips.
+    byId('quick-start').hidden = app.settings.quickStartSeen;
     modes[screenName].enter();
     ensureCameraRunning();
   } else {
@@ -941,6 +940,14 @@ function setUpEventListeners() {
   byId('accuracy-run').addEventListener('click', runAccuracyTest);
   byId('export-button').addEventListener('click', exportData);
   byId('import-file').addEventListener('change', importData);
+  byId('quick-start-open').addEventListener('click', () => {
+    byId('quick-start').hidden = !byId('quick-start').hidden;
+  });
+  byId('quick-start-close').addEventListener('click', () => {
+    byId('quick-start').hidden = true;
+    setSetting('quickStartSeen', true);
+  });
+
   byId('keep-learning').addEventListener('change', () => {
     setSetting('keepLearning', byId('keep-learning').checked);
     renderDataSummary();
@@ -1014,8 +1021,6 @@ async function start() {
   setUpEventListeners();
   showHandSwitch();
   showPhotoSwitch();
-  renderFingerKey(byId('camera-key'), { flipX: app.settings.flipDiagrams });
-  renderFingerKey(byId('alphabet-key'), { flipX: app.settings.flipDiagrams });
 
   // Start loading the hand tracker right away in the background. If it
   // fails here, the camera screen will show the error when it opens.

@@ -94,3 +94,22 @@ test('settings use defaults, save, load, and ignore junk', () => {
   assert.deepEqual(loadSettings(storage), DEFAULT_SETTINGS);
   assert.deepEqual(loadSettings(null), DEFAULT_SETTINGS);
 });
+
+test('photos are off by default, and only "on" or "off" is accepted', () => {
+  const data = new Map();
+  const storage = {
+    getItem: (key) => (data.has(key) ? data.get(key) : null),
+    setItem: (key, value) => data.set(key, String(value)),
+  };
+  assert.equal(loadSettings(storage).photos, 'off');
+  assert.equal(loadSettings(storage).quickStartSeen, false);
+
+  // An older saved setting from before photos were off by default is ignored.
+  data.set(SETTINGS_KEY, JSON.stringify({ showPhotos: true }));
+  assert.equal(loadSettings(storage).photos, 'off');
+
+  data.set(SETTINGS_KEY, JSON.stringify({ photos: 'on' }));
+  assert.equal(loadSettings(storage).photos, 'on');
+  data.set(SETTINGS_KEY, JSON.stringify({ photos: 'sometimes' }));
+  assert.equal(loadSettings(storage).photos, 'off');
+});

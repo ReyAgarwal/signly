@@ -254,10 +254,3 @@ export const MOTION_POSES = {
     motion: { from: 8, offset: [0.25, -0.2], path: [[0, 0], [2.7, 0], [0.5, 2.4], [3.1, 2.4]] },
   },
 };
-
-/** An open hand with spread fingers, used for the "which color is which finger" key. */
-export const KEY_POSE = {
-  view: [['y', -5]],
-  fingers: { index: straight(-17), middle: straight(-3), ring: straight(12), pinky: straight(27) },
-  thumb: { base: [-1, 0.5, 0.3], middle: [-1, 0.6, 0.1], tip: [-0.75, 0.75, 0] },
-};

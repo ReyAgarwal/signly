@@ -4,7 +4,7 @@
  * Keyboard shortcuts, so you can practice without reaching for the mouse
  * (your hands are busy signing!).
  *
- *   Anywhere:     1-8 = open a screen, Esc = Home
+ *   Anywhere:     1-7 = open a screen (menu order), 8 = Add Samples (teacher tool), Esc = Home
  *   Alphabet:     type a letter = practice it in Learn (J and Z open Spell);
  *                 in the reading quiz, type a letter = answer, Enter = next question
  *   Learn:        Enter or → = next letter, ← = previous letter, type a letter = pick it

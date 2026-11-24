@@ -28,14 +28,15 @@ signing, tells you which finger to fix, and tracks your progress over time.
 | **Challenge** | Timed game: spell as many words as you can. **Easy** (2–3 letters, 90 s), **Medium** (3–4 letters, 60 s, ×2 points), or **Hard** (4–6 letters, 45 s, ×3 points, no picture hints). Best score saved for each level. |
 | **Progress** | Accuracy for every letter, and for every day, so you can see improvement over time. |
 | **Test & Data** | **Fair accuracy test** (hides each person in turn and recognizes their signs using everyone else, shows per-person and per-letter accuracy and which letters get confused), what the coach knows (real signers / teacher-added / learned from you), the **keep learning** switch, **Export/Import**, and dataset credits. |
-| **Add Samples** | *Optional teacher tool.* A fluent signer or ASL teacher can record extra correct examples (about 30 snapshots in 3 seconds). Learners never need it. |
+| **Add Samples** | *Optional teacher tool, not in the main menu* (open it from **Test & Data**, or press `8`). A fluent signer or ASL teacher can record extra correct examples (about 30 snapshots in 3 seconds). Learners never need it. |
 
 ### On every page
 
 - **Right / Left hand switch** (top right): left-handed signers sign with their left hand, which is correct ASL. The switch flips every diagram and photo.
-- **Photos On / Off switch** (next to it): hides the real photos everywhere, so the diagrams get the space (the reading quiz then uses diagrams).
+- **Photos On / Off switch** (next to it): photos of real signers are **Off by default**, because the labeled diagrams are clearer. Turn them On to see two photos beside each diagram (the reading quiz uses photos when On, diagrams when Off). With photos Off, the diagram sits beside the letter and its steps.
 - **Layout that fits the window:** the diagram and photos are sized as shares of the card's width, so they grow and shrink together; on a narrow window the diagram gets its own row and the photos sit side by side under it.
-- **Finger color key** under the camera: an open hand showing which color is which finger (the same colors as the live skeleton; red = the finger to fix).
+- **Finger colors:** the diagrams' finger name tags use lighter shades of the live skeleton's colors (yellow thumb, green index, blue middle, purple ring, teal pinky), and a note under the video says so. Red = the finger to fix.
+- **Help for new users:** Home has a "New here? Start in 3 steps" guide with a button for each step. The first time you open a camera page, a **Quick start** card explains the camera, where to hold your hand, the green hold bar, and the red finger; the **How this works** button brings it back.
 - **"Did you know?" fun facts** about ASL, fingerspelling, Deaf culture, and how the coach works.
 - **Practice streak** (days in a row) on Home and Progress, and **"Practice next"** suggestions on Progress. Learn shows how many letters you've mastered, and Free Sign shows a picture of the letter it recognized.
 
@@ -45,7 +46,7 @@ Your hands are busy signing, so most things work from the keyboard:
 
 | Where | Keys |
 |-------|------|
-| Anywhere | `1`–`8` open a screen (same order as the menu: Alphabet, Learn, Spell, Challenge, Free Sign, Progress, Test & Data, Add Samples) · `Esc` Home |
+| Anywhere | `1`–`7` open a screen (same order as the menu: Alphabet, Learn, Spell, Challenge, Free Sign, Progress, Test & Data) · `8` Add Samples (teacher tool) · `Esc` Home |
 | Alphabet | Type a letter to practice it in Learn (J and Z open Spell) · in the Reading quiz: type a letter to answer, `Enter` next question |
 | Learn | `Enter` or `→` next letter (in a practice set: skip) · `←` previous letter · type a letter to jump to it |
 | Spell | `/` type a new phrase · `→` skip a letter · `←` go back a letter |

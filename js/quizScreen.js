@@ -48,7 +48,7 @@ export function createQuiz(app) {
     if (!question) {
       return;
     }
-    if (!app.settings.showPhotos) {
+    if (app.settings.photos !== 'on') {
       picture.append(createHandDiagram(question.answer, { flipX: app.settings.flipDiagrams, className: 'hand-diagram quiz-diagram' }));
       return;
     }

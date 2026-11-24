@@ -63,7 +63,6 @@
         <span class="nav-divider" aria-hidden="true"></span>
         <button type="button" data-screen="progress" title="Keyboard shortcut: 6"><svg class="icon" aria-hidden="true"><use href="#i-chart"></use></svg><span>Progress</span></button>
         <button type="button" data-screen="data" title="Keyboard shortcut: 7"><svg class="icon" aria-hidden="true"><use href="#i-flask"></use></svg><span>Test &amp; Data</span></button>
-        <button type="button" data-screen="record" title="Keyboard shortcut: 8"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg><span>Add Samples</span></button>
       </nav>
       <div class="header-switches">
       <div class="hand-switch photo-switch" role="radiogroup" aria-label="Show photos of real signers next to the diagrams?"
@@ -107,8 +106,8 @@
             real people signing, tells you exactly which finger to fix, and tracks your progress.
           </p>
           <div class="hero-actions">
-            <button type="button" class="button primary large on-dark" data-screen="alphabet">Start with the alphabet <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
-            <button type="button" class="button ghost large" data-screen="spell">Spell a word</button>
+            <button type="button" class="button primary large on-dark" data-screen="learn">Start learning <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+            <button type="button" class="button ghost large" data-screen="alphabet">See the alphabet</button>
           </div>
           <p id="home-status" class="status-chip"></p>
         </div>
@@ -116,19 +115,31 @@
       </div>
 
       <section class="home-section" aria-labelledby="how-title">
-        <h2 id="how-title" class="section-title">How it works</h2>
+        <h2 id="how-title" class="section-title">New here? Start in 3 steps</h2>
         <ol class="steps">
           <li class="step">
             <span class="step-number">1</span>
-            <div><h3>See the handshape</h3><p>Every letter has a diagram, a tip, and a warning about the letter it's most often mixed up with.</p></div>
+            <div>
+              <h3>Look at the handshapes</h3>
+              <p>The Alphabet shows every letter with a labeled diagram and short steps. No camera needed.</p>
+              <button type="button" class="button" data-screen="alphabet">Open the Alphabet</button>
+            </div>
           </li>
           <li class="step">
             <span class="step-number">2</span>
-            <div><h3>Sign to the camera</h3><p>MediaPipe finds 21 points on your hand. Hold the sign steady for half a second to lock it in.</p></div>
+            <div>
+              <h3>Practice with your camera</h3>
+              <p>In Learn, copy the letter and hold still until the green bar fills. If a finger turns red, fix that one.</p>
+              <button type="button" class="button primary" data-screen="learn">Start Learn</button>
+            </div>
           </li>
           <li class="step">
             <span class="step-number">3</span>
-            <div><h3>Get instant feedback</h3><p>The coach compares you with ~6,000 real signers and turns the finger you need to fix red.</p></div>
+            <div>
+              <h3>Keep it up</h3>
+              <p>Drill tricky letters with a Practice set, spell your name in Spell, or race the clock in Challenge.</p>
+              <button type="button" class="button" data-screen="spell">Spell my name</button>
+            </div>
           </li>
         </ol>
       </section>
@@ -179,11 +190,6 @@
             <span class="mode-title">Test &amp; Data <kbd>7</kbd></span>
             <span class="mode-text">How accurate is the coach? What does it know? Backups and "keep learning".</span>
           </button>
-          <button type="button" class="mode-card" data-screen="record">
-            <span class="mode-icon tone-slate"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg></span>
-            <span class="mode-title">Add Samples <kbd>8</kbd></span>
-            <span class="mode-text">Optional teacher tool: a fluent signer can add extra correct examples.</span>
-          </button>
         </div>
       </section>
 
@@ -192,7 +198,7 @@
         <table class="data-table shortcuts">
           <thead><tr><th scope="col">Where</th><th scope="col">Keys</th></tr></thead>
           <tbody>
-            <tr><td>Anywhere</td><td><kbd>1</kbd>–<kbd>8</kbd> open a screen (same order as the menu) · <kbd>Esc</kbd> Home</td></tr>
+            <tr><td>Anywhere</td><td><kbd>1</kbd>–<kbd>7</kbd> open a screen (same order as the menu) · <kbd>8</kbd> Add Samples (teacher tool) · <kbd>Esc</kbd> Home</td></tr>
             <tr><td>Alphabet</td><td>Type a letter to practice it in Learn (J and Z open Spell)</td></tr>
             <tr><td>Learn</td><td><kbd>Enter</kbd> or <kbd>→</kbd> next letter · <kbd>←</kbd> previous letter · type a letter to jump to it</td></tr>
             <tr><td>Spell</td><td><kbd>/</kbd> type a new phrase · <kbd>→</kbd> skip a letter · <kbd>←</kbd> go back a letter</td></tr>
@@ -222,14 +228,6 @@
         </div>
       </div>
       <div id="alphabet-intro" class="alphabet-intro">
-        <div class="card key-card">
-          <svg id="alphabet-key" class="finger-key"></svg>
-          <div>
-            <p class="key-title">Finger color key</p>
-            <p class="count-text">Each finger has the same color in every picture and on the live camera skeleton. A red finger is the one to fix.</p>
-            <p class="count-text">Left-handed? Use the <strong>Right / Left</strong> switch at the top to flip every picture.</p>
-          </div>
-        </div>
         <aside class="fact-card" data-fact-slot>
         <span class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-bulb"></use></svg></span>
         <div class="fact-body"><p class="fact-topic">Did you know?</p><p class="fact-text"></p></div>
@@ -278,6 +276,23 @@
           <h1 id="camera-title">Learn</h1>
           <p id="camera-sub" class="page-sub"></p>
         </div>
+        <button type="button" id="quick-start-open" class="button small-button" aria-controls="quick-start">
+          <span class="help-mark" aria-hidden="true">?</span> How this works
+        </button>
+      </div>
+      <div id="quick-start" class="card quick-start" hidden>
+        <div class="quick-start-head">
+          <h2 class="card-title">Quick start</h2>
+          <button type="button" id="quick-start-close" class="button primary">Got it</button>
+        </div>
+        <ol class="quick-steps">
+          <li><strong>Allow the camera.</strong> When your browser asks, click <em>Allow</em>. The video never leaves this laptop.</li>
+          <li><strong>Get in position.</strong> Sit about an arm's length away. Hold your hand up by your shoulder, palm toward the camera.</li>
+          <li><strong>Copy the picture.</strong> Follow the numbered steps and the diagram (the tags name each finger).</li>
+          <li><strong>Hold still.</strong> The green bar fills while you hold the right sign. A ✓ means you got it.</li>
+          <li><strong>Fix the red finger.</strong> If a finger turns red, the hint above the bar says what to change.</li>
+        </ol>
+        <p class="count-text">Left-handed? Click <strong>Left</strong> at the top: every picture flips. Want photos of real signers too? Turn <strong>Photos</strong> on.</p>
       </div>
       <div class="camera-layout">
         <div class="camera-column">
@@ -293,14 +308,8 @@
             </div>
           </div>
           <button type="button" id="camera-retry" class="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg> Try the camera again</button>
+          <p class="camera-note"><span class="color-dots" aria-hidden="true"><i class="dot-thumb"></i><i class="dot-index"></i><i class="dot-middle"></i><i class="dot-ring"></i><i class="dot-pinky"></i></span> <span>Skeleton colors match the diagram's finger tags: yellow thumb, green index, blue middle, purple ring, teal pinky. A <strong class="text-bad">red</strong> finger is the one to fix.</span></p>
           <p class="camera-note"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg> Everything stays on this laptop. Only 21 hand points are ever saved, never video.</p>
-          <div class="card key-card compact">
-            <svg id="camera-key" class="finger-key"></svg>
-            <div>
-              <p class="key-title">Finger color key</p>
-              <p class="count-text">The skeleton on the video uses these colors. A <strong class="text-bad">red</strong> finger is the one to fix.</p>
-            </div>
-          </div>
           <aside class="fact-card" data-fact-slot>
         <span class="fact-icon"><svg class="icon" aria-hidden="true"><use href="#i-bulb"></use></svg></span>
         <div class="fact-body"><p class="fact-topic">Did you know?</p><p class="fact-text"></p></div>
@@ -360,26 +369,28 @@
             </div>
 
             <div id="learn-coach-card" class="card coach-card">
-              <div class="lesson-head">
-                <div id="learn-letter" class="big-letter target lesson-letter">A</div>
-                <div class="lesson-text">
-                  <div class="lesson-meta">
-                    <p class="label">Make this letter</p>
-                    <span id="learn-position" class="chip"></span>
-                    <span id="learn-repeat" class="chip good-chip" hidden></span>
+              <div class="lesson-top">
+                <div class="lesson-head">
+                  <div id="learn-letter" class="big-letter target lesson-letter">A</div>
+                  <div class="lesson-text">
+                    <div class="lesson-meta">
+                      <p class="label">Make this letter</p>
+                      <span id="learn-position" class="chip"></span>
+                      <span id="learn-repeat" class="chip good-chip" hidden></span>
+                    </div>
+                    <ol id="learn-steps" class="letter-steps"></ol>
                   </div>
-                  <ol id="learn-steps" class="letter-steps"></ol>
                 </div>
-              </div>
-              <div class="picture-row">
-                <figure class="diagram-figure">
-                  <svg id="learn-diagram" class="hand-diagram turnable"></svg>
-                  <figcaption>Diagram · drag to turn it, double-click to reset</figcaption>
-                </figure>
-                <figure class="photos-figure">
-                  <div id="learn-photos" class="letter-photos"></div>
-                  <figcaption>Real signers · photos: Sowrow et al. 2024, CC BY 4.0</figcaption>
-                </figure>
+                <div class="picture-row">
+                  <figure class="diagram-figure">
+                    <svg id="learn-diagram" class="hand-diagram turnable"></svg>
+                    <figcaption>Diagram · drag to turn it, double-click to reset</figcaption>
+                  </figure>
+                  <figure class="photos-figure">
+                    <div id="learn-photos" class="letter-photos"></div>
+                    <figcaption>Real signers · photos: Sowrow et al. 2024, CC BY 4.0</figcaption>
+                  </figure>
+                </div>
               </div>
               <div id="learn-check" class="feedback-box">
                 <p id="learn-hint" class="hint" aria-live="polite"></p>
@@ -445,25 +456,27 @@
 
             <div id="spell-lesson" class="card coach-card" hidden>
               <div id="spell-phrase" class="phrase-tiles" aria-label="Your phrase, letter by letter"></div>
-              <div class="lesson-head">
-                <div id="spell-current-letter" class="big-letter target lesson-letter">A</div>
-                <div class="lesson-text">
-                  <div class="lesson-meta">
-                    <p class="label">Sign this letter</p>
-                    <span id="spell-step" class="chip"></span>
+              <div class="lesson-top">
+                <div class="lesson-head">
+                  <div id="spell-current-letter" class="big-letter target lesson-letter">A</div>
+                  <div class="lesson-text">
+                    <div class="lesson-meta">
+                      <p class="label">Sign this letter</p>
+                      <span id="spell-step" class="chip"></span>
+                    </div>
+                    <ol id="spell-steps" class="letter-steps"></ol>
                   </div>
-                  <ol id="spell-steps" class="letter-steps"></ol>
                 </div>
-              </div>
-              <div class="picture-row">
-                <figure class="diagram-figure">
-                  <svg id="spell-diagram" class="hand-diagram turnable"></svg>
-                  <figcaption>Diagram · drag to turn it</figcaption>
-                </figure>
-                <figure class="photos-figure">
-                  <div id="spell-photos" class="letter-photos"></div>
-                  <figcaption>Real signers · photos: Sowrow et al. 2024, CC BY 4.0</figcaption>
-                </figure>
+                <div class="picture-row">
+                  <figure class="diagram-figure">
+                    <svg id="spell-diagram" class="hand-diagram turnable"></svg>
+                    <figcaption>Diagram · drag to turn it</figcaption>
+                  </figure>
+                  <figure class="photos-figure">
+                    <div id="spell-photos" class="letter-photos"></div>
+                    <figcaption>Real signers · photos: Sowrow et al. 2024, CC BY 4.0</figcaption>
+                  </figure>
+                </div>
               </div>
               <div class="feedback-box">
                 <p id="spell-hint" class="hint" aria-live="polite"></p>
@@ -655,7 +668,9 @@
         </p>
         <div class="button-row">
           <button type="button" id="forget-learned" class="button danger-outline">Forget what it learned from me</button>
+          <button type="button" class="button" data-screen="record"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg> Add Samples (teacher tool)</button>
         </div>
+        <p class="count-text">Add Samples is for a fluent signer or ASL teacher to add extra correct examples. Learners never need it.</p>
       </div>
 
       <div class="card">

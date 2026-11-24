@@ -10,13 +10,14 @@
  *      The palm is a rounded shape. Parts farther away are drawn first, so
  *      closer parts cover them, like layers of paper ("painter's algorithm").
  *   4. Each finger gets the same color as in the live skeleton, so you can
- *      match them up. The finger a hint is about turns red.
+ *      match them up, and (on the big diagrams) a name tag like "Index".
+ *      The finger a hint is about turns red.
  *
  * buildDiagramShapes() is pure math (unit tested); renderHandDiagram() makes the SVG.
  */
 
 import { buildHand } from './handModel.js';
-import { LETTER_POSES, MOTION_POSES, KEY_POSE } from './handPoses.js';
+import { LETTER_POSES, MOTION_POSES } from './handPoses.js';
 
 /** Colors: light versions of the skeleton's finger colors, so they're easy to match. */
 export const DIAGRAM_COLORS = {
@@ -34,15 +35,6 @@ export const DIAGRAM_COLORS = {
   motion: '#4f46e5',
   label: '#1f2937',
 };
-
-/** Finger names for the color key, in landmark order (thumb tip = 4, index tip = 8, ...). */
-const KEY_LABELS = [
-  { finger: 'thumb', name: 'Thumb', tip: 4, side: 'outside' },
-  { finger: 'index', name: 'Index', tip: 8, distance: 1.1 },
-  { finger: 'middle', name: 'Middle', tip: 12, distance: 2.6 },
-  { finger: 'ring', name: 'Ring', tip: 16, distance: 1.1 },
-  { finger: 'pinky', name: 'Pinky', tip: 20, side: 'outside' },
-];
 
 /** How thick each bone is drawn (thumb bones first; the thumb's first bone is the fleshy base). */
 const BONE_WIDTHS = {
@@ -722,74 +714,6 @@ export function enableDragToTurn(svg, redraw) {
   };
   svg.addEventListener('dblclick', reset);
   return reset;
-}
-
-/**
- * Draws the finger color key: an open hand with each finger in its color
- * and labeled with its name, so users can match colors to fingers.
- * @param {SVGElement} svg - The SVG element to fill.
- * @param {{flipX?:boolean}} options - flipX = mirror for left-handed signers.
- * @returns {void}
- */
-export function renderFingerKey(svg, options = {}) {
-  svg.replaceChildren();
-  const flipX = options.flipX ?? false;
-  const hand = buildHand(KEY_POSE);
-  const { shapes } = buildDiagramShapes(hand, { flipX, showForearm: false });
-
-  // Index, middle, and ring names go just past their fingertips (middle a bit
-  // farther, so neighbors don't bump into each other). Thumb and pinky names go
-  // out to the side of their fingertips.
-  const labels = [];
-  const handCenterX = project(hand.landmarks[9], flipX)[0];
-  for (const { finger, name, tip, distance, side } of KEY_LABELS) {
-    const tipPoint = project(hand.landmarks[tip], flipX);
-    if (side === 'outside') {
-      const goesRight = tipPoint[0] > handCenterX;
-      labels.push({ finger, name, anchor: goesRight ? 'start' : 'end', at: [tipPoint[0] + (goesRight ? 0.7 : -0.7), tipPoint[1] + 0.2] });
-      continue;
-    }
-    const before = project(hand.landmarks[tip - 1], flipX);
-    const dx = tipPoint[0] - before[0];
-    const dy = tipPoint[1] - before[1];
-    const length = Math.hypot(dx, dy) || 1;
-    labels.push({ finger, name, anchor: 'middle', at: [tipPoint[0] + (dx / length) * distance, tipPoint[1] + (dy / length) * distance] });
-  }
-
-  const framePoints = [...hand.landmarks.map((p) => project(p, flipX)), ...labels.map((l) => l.at)];
-  const viewBox = computeViewBox(framePoints, 0);
-  // Leave a little extra room on the sides for the words.
-  // Leave room for the words beside the thumb and pinky.
-  viewBox[0] -= 3.6;
-  viewBox[1] -= 0.6;
-  viewBox[2] += 7.2;
-  viewBox[3] += 1.2;
-  svg.setAttribute('viewBox', viewBox.map((n) => n.toFixed(3)).join(' '));
-  svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', 'Finger color key: thumb yellow, index green, middle blue, ring purple, pinky teal');
-  drawShapes(svg, shapes);
-
-  for (const label of labels) {
-    const text = svgElement('text', {
-      x: label.at[0], y: label.at[1], 'text-anchor': label.anchor, 'dominant-baseline': 'middle',
-      'font-size': 1.25, 'font-weight': 800, fill: DIAGRAM_COLORS.label,
-      stroke: DIAGRAM_COLORS[label.finger], 'stroke-width': 0.35, 'paint-order': 'stroke',
-    });
-    text.textContent = label.name;
-    svg.append(text);
-  }
-}
-
-/**
- * Creates a brand-new SVG finger color key.
- * @param {{flipX?:boolean, className?:string}} options
- * @returns {SVGElement} The finished key.
- */
-export function createFingerKey(options = {}) {
-  const svg = document.createElementNS(SVG_NAMESPACE, 'svg');
-  svg.setAttribute('class', options.className ?? 'finger-key');
-  renderFingerKey(svg, options);
-  return svg;
 }
 
 /**
