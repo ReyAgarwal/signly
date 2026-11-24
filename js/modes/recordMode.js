@@ -1,12 +1,17 @@
 /**
  * recordMode.js
  * -------------
- * The Record Samples screen: this is how the coach LEARNS.
+ * The Add Samples screen: a TEACHER TOOL.
  *
- * We have no dataset, so we make our own. You pick a letter, make the sign,
- * and press Record. After a 3-2-1 countdown, the coach saves a snapshot of
- * your normalized hand (63 numbers) every 100 ms for 3 seconds, so about
- * 30 samples per press. k-NN later compares live hands to these samples.
+ * The coach already knows all 24 letters from ~6,000 hands of real signers
+ * (data/reference-hands.json), so learners never need this screen. It's for
+ * a fluent signer or ASL teacher who wants to add extra correct examples,
+ * for example of a letter the coach often misses.
+ *
+ * Pick a letter, make the sign, and press Record. After a 3-2-1 countdown,
+ * the coach saves a snapshot of the normalized hand (63 numbers) every
+ * 100 ms for 3 seconds, so about 30 samples per press. They're added to
+ * what k-NN compares against, marked as "teacher" samples.
  */
 
 import { STATIC_LETTERS, LETTER_TIPS, LETTER_MIXUPS } from '../letters.js';
@@ -44,7 +49,7 @@ export function createRecordMode(app) {
    * @returns {void}
    */
   function refresh() {
-    const counts = app.sampleCounts();
+    const counts = app.addedCounts();
     renderLetterGrid(byId('record-letter-grid'), {
       counts: counts,
       selected: selectedLetter,
@@ -54,10 +59,15 @@ export function createRecordMode(app) {
     renderHandDiagram(byId('record-diagram'), selectedLetter, { flipX: app.settings.flipDiagrams });
     byId('record-tip').textContent = LETTER_TIPS[selectedLetter];
     byId('record-mixup').textContent = LETTER_MIXUPS[selectedLetter];
-    byId('record-count').textContent = (counts[selectedLetter] ?? 0) + ' samples recorded for ' + selectedLetter;
+    const realSigners = (app.sampleCounts()[selectedLetter] ?? 0) - (counts[selectedLetter] ?? 0);
+    byId('record-count').textContent = (counts[selectedLetter] ?? 0) + ' added here for ' + selectedLetter
+      + ' (the coach also has ' + realSigners + ' from real signers)';
 
-    const letterCount = app.recordedLetters().length;
-    byId('record-total').textContent = 'Total: ' + app.data.samples.length + ' samples across ' + letterCount + ' of 24 letters.';
+    let totalAdded = 0;
+    for (const letter of STATIC_LETTERS) {
+      totalAdded += counts[letter] ?? 0;
+    }
+    byId('record-total').textContent = 'Total added on this screen: ' + totalAdded + ' samples.';
   }
 
   /**
@@ -178,9 +188,9 @@ export function createRecordMode(app) {
   startButton.addEventListener('click', startCountdown);
 
   makeConfirmButton(byId('record-delete-letter'), () => {
-    const count = app.sampleCounts()[selectedLetter] ?? 0;
+    const count = app.addedCounts()[selectedLetter] ?? 0;
     app.deleteSamplesFor(selectedLetter);
-    statusText.textContent = 'Deleted ' + count + ' samples of ' + selectedLetter + '.';
+    statusText.textContent = 'Deleted ' + count + ' added samples of ' + selectedLetter + '. The real-signer reference is unchanged.';
     refresh();
   });
 

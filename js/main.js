@@ -2,7 +2,8 @@
  * main.js
  * -------
  * The starting point of the app. It:
- *   1. Loads saved data and builds the letter templates.
+ *   1. Loads the reference hands (real signers, data/reference-hands.json)
+ *      plus anything saved in this browser, and builds the k-NN "pool".
  *   2. Sets up navigation between screens.
  *   3. Starts the webcam and hand tracker when a camera screen opens.
  *   4. Runs the "frame loop": for every new video frame, find the hand,
@@ -10,18 +11,27 @@
  *   5. Wires up the Alphabet, Progress, and Test & Data screens.
  *   6. Sends keyboard shortcuts (keyboard.js) to the right place.
  *
+ * Where the coach's knowledge comes from (the "pool" k-NN searches):
+ *   - reference: ~6,000 hands of real signers from public datasets (always)
+ *   - teacher:   samples added on the Add Samples screen (optional)
+ *   - learned:   your own correct signs, saved only when the real signers
+ *                strongly agree (see learning.js), if "keep learning" is on
+ *
  * The "app" object below is shared with every mode. It holds the data and
  * small helper functions, so modes don't each need to know about storage.
  */
 
 import { startCamera, createHandTracker, detectHand, friendlyCameraError } from './camera.js';
-import { normalizeHand, pointsToFeatures, shouldMirror } from './landmarks.js';
-import { classify, evaluateAccuracy } from './classifier.js';
+import { normalizeHand, pointsToFeatures, featuresToPoints, shouldMirror } from './landmarks.js';
+import { classify, evaluateUnseenPeople } from './classifier.js';
 import { allFingerBends, buildAllTemplates } from './hints.js';
+import { handFeatures } from './features.js';
+import { loadReferenceHands } from './reference.js';
+import { shouldLearn, addLearnedSample, countBySource } from './learning.js';
 import { STATIC_LETTERS } from './letters.js';
 import { addAttempt, makeAttempt } from './progress.js';
 import {
-  loadData, saveData, emptyData, makeExportJson, parseImportJson, mergeData, loadSettings, saveSettings,
+  loadData, saveData, emptyData, makeExportJson, parseImportJson, mergeData, loadSettings, saveSettings, makeSampleId,
 } from './storage.js';
 import {
   byId, showScreen, showBanner, hideBanner, setCameraStatus, renderProgress, renderAlphabetChart,
@@ -40,12 +50,20 @@ const MIN_CONFIDENCE = 0.6;
 /** Show the "no hand detected" message after this long without a hand. */
 const NO_HAND_MESSAGE_DELAY_MS = 1200;
 
+/** The accuracy test checks this many signs per letter per person (keeps it to a few seconds). */
+const TEST_SIGNS_PER_LETTER_PER_PERSON = 10;
+
 const NO_HAND_MESSAGE = 'No hand detected. Hold one hand up inside the video, about an arm\'s length from the camera, in good light.';
 
 // ---------- Shared app object (given to every mode) ----------
 
 const app = {
   data: emptyData(),
+  reference: [],
+  referenceSources: [],
+  referencePool: [],
+  pool: [],
+  trustedPool: [],
   templates: {},
   settings: loadSettings(),
   minConfidence: MIN_CONFIDENCE,
@@ -53,11 +71,13 @@ const app = {
   // draw the reference hand the same way around as the user's hand.
   handMirrored: false,
   isTrackerReady: () => cameraState === 'ready',
-  sampleCounts: countSamplesPerLetter,
-  recordedLetters: listRecordedLetters,
-  addSamples: addSamples,
-  deleteSamplesFor: deleteSamplesFor,
+  sampleCounts: countKnownSamplesPerLetter,
+  addedCounts: countAddedSamplesPerLetter,
+  knownLetters: listKnownLetters,
+  addSamples: addTeacherSamples,
+  deleteSamplesFor: deleteTeacherSamplesFor,
   recordAttempt: recordAttempt,
+  learnFrom: learnFrom,
   setBestSpellScore: setBestSpellScore,
   recognize: recognize,
   masteredLetters: listMasteredLetters,
@@ -91,32 +111,100 @@ function persist() {
 }
 
 /**
- * Rebuilds the letter templates after samples change, then saves.
+ * Turns a stored sample (63 normalized numbers) into a k-NN pool entry
+ * (the richer 86-number feature vector from features.js).
+ * @param {{letter:string, features:number[], source?:string, group?:string}} sample - A stored sample.
+ * @returns {{letter:string, features:number[], source:string, group:string}} The pool entry.
+ */
+function toPoolEntry(sample) {
+  return {
+    letter: sample.letter,
+    features: handFeatures(featuresToPoints(sample.features)),
+    source: sample.source ?? 'teacher',
+    group: sample.group ?? 'added',
+  };
+}
+
+/**
+ * Rebuilds the TRUSTED knowledge: real signers + teacher-added samples.
+ * This makes the letter templates (for finger hints and the reference
+ * skeleton) and the trusted k-NN pool. The ~6,000 reference entries are
+ * computed once and reused, because that's the slow part.
+ * @returns {void}
+ */
+function rebuildTrusted() {
+  if (app.referencePool.length !== app.reference.length) {
+    app.referencePool = app.reference.map(toPoolEntry);
+  }
+  const teacherSamples = app.data.samples.filter((s) => s.source !== 'learned');
+  // Templates come only from TRUSTED samples, never from what was learned from you.
+  app.templates = buildAllTemplates([...app.reference, ...teacherSamples]);
+  app.trustedPool = [...app.referencePool, ...teacherSamples.map(toPoolEntry)];
+}
+
+/**
+ * Rebuilds the full k-NN pool: trusted samples plus (if "keep learning"
+ * is on) the samples learned from this user. This part is fast.
+ * @returns {void}
+ */
+function rebuildPool() {
+  let learnedEntries = [];
+  if (app.settings.keepLearning) {
+    learnedEntries = app.data.samples.filter((s) => s.source === 'learned').map(toPoolEntry);
+  }
+  app.pool = [...app.trustedPool, ...learnedEntries];
+}
+
+/**
+ * Rebuilds everything that depends on the samples.
+ * @returns {void}
+ */
+function rebuildKnowledge() {
+  rebuildTrusted();
+  rebuildPool();
+}
+
+/**
+ * Rebuilds the coach's knowledge after samples change, then saves.
  * @returns {void}
  */
 function onSamplesChanged() {
-  app.templates = buildAllTemplates(app.data.samples);
+  rebuildKnowledge();
   persist();
 }
 
 /**
- * Counts recorded samples for each letter.
+ * Counts trusted samples (real signers + teacher-added) for each letter.
  * @returns {Object<string, number>} letter -> number of samples.
  */
-function countSamplesPerLetter() {
+function countKnownSamplesPerLetter() {
   const counts = {};
-  for (const sample of app.data.samples) {
+  for (const sample of app.trustedPool) {
     counts[sample.letter] = (counts[sample.letter] ?? 0) + 1;
   }
   return counts;
 }
 
 /**
- * Lists the letters that have at least one sample, in alphabet order.
- * @returns {string[]} The recorded letters.
+ * Counts samples added on the Add Samples screen, for each letter.
+ * @returns {Object<string, number>} letter -> number of added samples.
  */
-function listRecordedLetters() {
-  const counts = countSamplesPerLetter();
+function countAddedSamplesPerLetter() {
+  const counts = {};
+  for (const sample of app.data.samples) {
+    if (sample.source !== 'learned') {
+      counts[sample.letter] = (counts[sample.letter] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
+/**
+ * Lists the letters the coach can recognize, in alphabet order.
+ * @returns {string[]} The letters.
+ */
+function listKnownLetters() {
+  const counts = countKnownSamplesPerLetter();
   return STATIC_LETTERS.filter((letter) => counts[letter] > 0);
 }
 
@@ -143,10 +231,13 @@ function listMasteredLetters() {
 function setSetting(name, value) {
   app.settings[name] = value;
   saveSettings(app.settings);
+  if (name === 'keepLearning') {
+    rebuildPool();
+  }
 }
 
 /**
- * Opens Record or Learn with a letter already chosen.
+ * Opens Add Samples or Learn with a letter already chosen.
  * @param {'record'|'learn'} screenName - Which screen.
  * @param {string} letter - The letter to select.
  * @returns {void}
@@ -161,22 +252,24 @@ function openModeWithLetter(screenName, letter) {
 }
 
 /**
- * Adds newly recorded samples.
- * @param {Array<Object>} newSamples - Samples from Record mode.
+ * Adds samples recorded on the Add Samples screen (by a teacher / fluent signer).
+ * @param {Array<Object>} newSamples - Samples from the Add Samples screen.
  * @returns {void}
  */
-function addSamples(newSamples) {
-  app.data.samples.push(...newSamples);
+function addTeacherSamples(newSamples) {
+  for (const sample of newSamples) {
+    app.data.samples.push({ ...sample, source: 'teacher' });
+  }
   onSamplesChanged();
 }
 
 /**
- * Deletes every sample of one letter.
- * @param {string} letter - The letter to delete.
+ * Deletes the teacher-added samples of one letter (real-signer data is never deleted).
+ * @param {string} letter - The letter.
  * @returns {void}
  */
-function deleteSamplesFor(letter) {
-  app.data.samples = app.data.samples.filter((sample) => sample.letter !== letter);
+function deleteTeacherSamplesFor(letter) {
+  app.data.samples = app.data.samples.filter((s) => s.letter !== letter || s.source === 'learned');
   onSamplesChanged();
 }
 
@@ -190,6 +283,33 @@ function deleteSamplesFor(letter) {
 function recordAttempt(letter, correct, mode) {
   app.data.attempts = addAttempt(app.data.attempts, makeAttempt(letter, correct, mode, Date.now()));
   persist();
+}
+
+/**
+ * "Keep learning": after a correct sign, maybe save it so the coach gets
+ * used to this user's hand. Only happens if the real signers strongly agree.
+ * @param {Object} hand - The processed hand at the moment of the correct sign.
+ * @param {string} targetLetter - The letter the user was asked for.
+ * @param {string} lockedLetter - The letter the coach locked in.
+ * @returns {boolean} True if the sign was learned.
+ */
+function learnFrom(hand, targetLetter, lockedLetter) {
+  if (!app.settings.keepLearning || !hand) {
+    return false;
+  }
+  // Ask ONLY the trusted samples (no previously learned ones), so the coach
+  // can't talk itself into something the real signers disagree with.
+  const trustedGuess = classify(hand.vector, app.trustedPool);
+  if (!shouldLearn(targetLetter, lockedLetter, trustedGuess)) {
+    return false;
+  }
+  const now = Date.now();
+  const sample = { id: makeSampleId(now), letter: targetLetter, features: hand.features, hand: hand.handedness, time: now, source: 'learned' };
+  app.data.samples = addLearnedSample(app.data.samples, sample);
+  // Learned samples never change the trusted templates, so only the quick pool rebuild is needed.
+  rebuildPool();
+  persist();
+  return true;
 }
 
 /**
@@ -213,7 +333,7 @@ function recognize(hand, smoother, nowMs) {
   if (!hand) {
     return { guess: null, smooth: smoother.update(null, nowMs) };
   }
-  const guess = classify(hand.features, app.data.samples);
+  const guess = classify(hand.vector, app.pool);
 
   // A low-confidence guess is treated like "not sure" (null), so the
   // smoother never locks in a letter the neighbors can't agree on.
@@ -230,7 +350,7 @@ function recognize(hand, smoother, nowMs) {
  * Turns MediaPipe's raw detection into everything the modes need.
  * @param {{landmarks:Array, handedness:string}} detection - From detectHand().
  * @param {HTMLVideoElement} video - The webcam video (for its width/height).
- * @returns {Object} The processed hand: landmarks, points, features, bends, etc.
+ * @returns {Object} The processed hand: landmarks, points, features, vector, bends, etc.
  */
 function buildHand(detection, video) {
   const aspectRatio = video.videoWidth / video.videoHeight;
@@ -241,6 +361,7 @@ function buildHand(detection, video) {
     mirrored: shouldMirror(detection.handedness),
     points: points,
     features: pointsToFeatures(points),
+    vector: handFeatures(points),
     bends: allFingerBends(points),
   };
 }
@@ -372,13 +493,18 @@ function frameLoop() {
  * @returns {void}
  */
 function renderHome() {
-  const letters = listRecordedLetters();
   const status = byId('home-status');
-  if (letters.length === 0) {
-    status.textContent = 'Start here: look through the Alphabet, then open Record Samples and record at least 3 letters (for example A, B, and L). The coach learns from YOUR hands.';
+  if (app.reference.length === 0) {
+    status.textContent = 'The real-signer reference did not load, so the coach only knows samples added on the Add Samples screen.';
     return;
   }
-  status.textContent = app.data.samples.length + ' samples recorded for ' + letters.length + ' letters (' + letters.join(', ') + '). Try Free Sign or Learn!';
+  const { learned } = countBySource(app.data.samples);
+  let text = 'Ready! The coach knows all 24 static letters from ' + app.reference.length.toLocaleString()
+    + ' hands of real people signing. Start with the Alphabet, then practice in Learn.';
+  if (learned > 0) {
+    text += ' It has also learned from ' + learned + ' of your correct signs.';
+  }
+  status.textContent = text;
 }
 
 /**
@@ -388,7 +514,6 @@ function renderHome() {
 function renderAlphabet() {
   byId('alphabet-flip').checked = app.settings.flipDiagrams;
   renderAlphabetChart(byId('alphabet-grid'), {
-    counts: countSamplesPerLetter(),
     mastered: listMasteredLetters(),
     flipX: app.settings.flipDiagrams,
     onPick: (letter) => openModeWithLetter('learn', letter),
@@ -396,13 +521,17 @@ function renderAlphabet() {
 }
 
 /**
- * Updates the sample/attempt counts on the Test & Data screen.
+ * Updates the "what the coach knows" summary on the Test & Data screen.
  * @returns {void}
  */
 function renderDataSummary() {
-  const letters = listRecordedLetters();
-  byId('data-summary').textContent = 'Saved in this browser: ' + app.data.samples.length + ' samples across '
-    + letters.length + ' letters, and ' + app.data.attempts.length + ' practice attempts.';
+  const { teacher, learned } = countBySource(app.data.samples);
+  byId('knowledge-reference').textContent = app.reference.length.toLocaleString();
+  byId('knowledge-teacher').textContent = String(teacher);
+  byId('knowledge-learned').textContent = String(learned);
+  byId('keep-learning').checked = app.settings.keepLearning;
+  byId('data-summary').textContent = 'Saved in this browser: ' + teacher + ' added samples, ' + learned
+    + ' learned samples, and ' + app.data.attempts.length + ' practice attempts.';
 }
 
 /**
@@ -452,34 +581,36 @@ function screenFromAddress() {
 // ---------- Test & Data screen ----------
 
 /**
- * Runs the accuracy test and shows the results.
+ * Runs the "people it has never seen" accuracy test and shows the results.
  * @returns {void}
  */
 function runAccuracyTest() {
   const results = byId('accuracy-results');
-  const letters = listRecordedLetters();
-  if (letters.length < 2) {
-    results.replaceChildren();
-    byId('data-status').textContent = 'Record samples for at least 2 letters (5 or more samples each) before running the accuracy test.';
+  const status = byId('accuracy-status');
+  if (app.trustedPool.length === 0) {
+    status.textContent = 'There is nothing to test: the reference data did not load.';
     return;
   }
-  const report = evaluateAccuracy(app.data.samples);
-  if (report.total === 0) {
-    byId('data-status').textContent = 'Not enough samples to test. Record at least 2 samples per letter.';
-    return;
-  }
-  byId('data-status').textContent = '';
-  renderAccuracyReport(results, report);
+  status.textContent = 'Testing... this takes a few seconds.';
+  results.replaceChildren();
+  // setTimeout lets the browser show "Testing..." before the long calculation starts.
+  setTimeout(() => {
+    const started = performance.now();
+    const report = evaluateUnseenPeople(app.trustedPool, { testPerLetterPerGroup: TEST_SIGNS_PER_LETTER_PER_PERSON });
+    const seconds = ((performance.now() - started) / 1000).toFixed(1);
+    status.textContent = 'Done in ' + seconds + ' seconds.';
+    renderAccuracyReport(results, report);
+  }, 50);
 }
 
 /**
- * Downloads all data as a JSON file.
+ * Downloads all data saved in this browser as a JSON file.
  * @returns {void}
  */
 function exportData() {
   const today = new Date().toISOString().slice(0, 10);
   downloadTextFile('asl-coach-data-' + today + '.json', makeExportJson(app.data));
-  byId('data-status').textContent = 'Exported ' + app.data.samples.length + ' samples. Check your Downloads folder.';
+  byId('data-status').textContent = 'Exported ' + app.data.samples.length + ' samples and your progress. Check your Downloads folder.';
 }
 
 /**
@@ -563,13 +694,25 @@ function setUpEventListeners() {
   byId('accuracy-run').addEventListener('click', runAccuracyTest);
   byId('export-button').addEventListener('click', exportData);
   byId('import-file').addEventListener('change', importData);
+  byId('keep-learning').addEventListener('change', () => {
+    setSetting('keepLearning', byId('keep-learning').checked);
+    renderDataSummary();
+  });
+
+  makeConfirmButton(byId('forget-learned'), () => {
+    const before = app.data.samples.length;
+    app.data.samples = app.data.samples.filter((s) => s.source !== 'learned');
+    onSamplesChanged();
+    renderDataSummary();
+    byId('data-status').textContent = 'Forgot ' + (before - app.data.samples.length) + ' learned samples. The real-signer reference is unchanged.';
+  });
 
   makeConfirmButton(byId('delete-all'), () => {
     app.data = emptyData();
     onSamplesChanged();
     renderDataSummary();
     byId('accuracy-results').replaceChildren();
-    byId('data-status').textContent = 'All samples and progress were deleted.';
+    byId('data-status').textContent = 'All added samples, learned samples, and progress were deleted. The real-signer reference is unchanged.';
   });
 
   makeConfirmButton(byId('progress-reset'), () => {
@@ -580,19 +723,37 @@ function setUpEventListeners() {
 }
 
 /**
- * Starts the whole app.
- * @returns {void}
+ * Loads the real-signer reference data. If it fails, the app still runs
+ * with any samples added in this browser, and shows a warning.
+ * @returns {Promise<void>}
  */
-function start() {
+async function loadReference() {
+  try {
+    const reference = await loadReferenceHands();
+    app.reference = reference.samples;
+    app.referenceSources = reference.sources;
+  } catch (error) {
+    console.error(error);
+    showBanner('The real-signer reference (data/reference-hands.json) could not load. Make sure the "data" folder is next to index.html, then reload.', 'error');
+  }
+}
+
+/**
+ * Starts the whole app.
+ * @returns {Promise<void>}
+ */
+async function start() {
   // The JavaScript is running, so the "code didn't load" warning isn't needed.
   byId('load-warning').remove();
+  byId('home-status').textContent = 'Loading the real-signer reference...';
 
   const loaded = loadData();
   app.data = loaded.data;
-  app.templates = buildAllTemplates(app.data.samples);
   if (loaded.error) {
     showBanner(loaded.error, 'error');
   }
+  await loadReference();
+  rebuildKnowledge();
 
   modes = {
     record: createRecordMode(app),

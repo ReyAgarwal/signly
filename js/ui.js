@@ -177,10 +177,9 @@ export function renderLetterGrid(container, options) {
 /**
  * Fills the Alphabet screen with a card for every letter.
  * @param {HTMLElement} container - The grid element.
- * @param {{counts:Object<string,number>, mastered:Set<string>, flipX:boolean,
- *   onPick:function(string):void}} options
- *   counts = samples per letter, mastered = letters signed correctly before,
- *   flipX = mirror the pictures, onPick = called when a card is clicked.
+ * @param {{mastered:Set<string>, flipX:boolean, onPick:function(string):void}} options
+ *   mastered = letters signed correctly before, flipX = mirror the pictures,
+ *   onPick = called when a card is clicked.
  * @returns {void}
  */
 export function renderAlphabetChart(container, options) {
@@ -198,12 +197,9 @@ export function renderAlphabetChart(container, options) {
     card.append(makeElement('span', 'card-tip', LETTER_TIPS[letter]));
     card.append(makeElement('span', 'mixup', LETTER_MIXUPS[letter]));
 
-    const count = options.counts[letter] ?? 0;
-    let status = count + ' samples recorded';
     if (options.mastered.has(letter)) {
-      status += ' · ✓ signed correctly';
+      card.append(makeElement('span', 'card-status', '✓ You have signed this correctly'));
     }
-    card.append(makeElement('span', 'card-status', status));
 
     card.addEventListener('click', () => options.onPick(letter));
     container.append(card);
@@ -429,7 +425,21 @@ export function renderProgress(attempts, bestSpellScore) {
 export function renderAccuracyReport(container, report) {
   container.replaceChildren();
   container.append(makeElement('p', 'feedback',
-    'Overall accuracy: ' + formatPercent(report.accuracy) + ' (' + report.correct + ' of ' + report.total + ' test samples recognized correctly)'));
+    'Overall accuracy on people the coach had never seen: ' + formatPercent(report.accuracy)
+    + ' (' + report.correct + ' of ' + report.total + ' signs recognized correctly)'));
+
+  // One row per person (or recording group) that was hidden during the test.
+  if (report.perGroup) {
+    const groupRows = [];
+    for (const group of Object.keys(report.perGroup).sort()) {
+      const stats = report.perGroup[group];
+      groupRows.push([describeGroup(group), stats.correct + ' / ' + stats.total, makeAccuracyBar(stats.correct / stats.total)]);
+    }
+    container.append(makeElement('h3', '', 'Accuracy for each hidden person'));
+    container.append(makeElement('p', 'count-text',
+      'Each row: that person\'s signs were hidden, and the coach had to recognize them using only everyone else.'));
+    container.append(makeTable(['Person / recording', 'Correct', 'Accuracy'], groupRows));
+  }
 
   // Plain-English list of the most common mix-ups.
   container.append(makeElement('h3', '', 'Most confused letters'));
@@ -459,6 +469,24 @@ export function renderAccuracyReport(container, report) {
   container.append(makeElement('p', 'count-text',
     'Rows = the real letter. Columns = what the coach guessed. Green = right, red = mix-up.'));
   container.append(makeConfusionMatrix(report.confusion));
+}
+
+/**
+ * Turns a group code from the reference data into a readable name.
+ * @param {string} group - e.g. "ds1-person2" or "ds2-evaluation".
+ * @returns {string} e.g. "Dataset 1, person 2".
+ */
+function describeGroup(group) {
+  const names = {
+    'ds1-person1': 'Dataset 1, person 1',
+    'ds1-person2': 'Dataset 1, person 2',
+    'ds1-person3': 'Dataset 1, person 3',
+    'ds2-train': 'Dataset 2, main recordings',
+    'ds2-test': 'Dataset 2, test photos',
+    'ds2-evaluation': 'Dataset 2, evaluation videos',
+    added: 'Added on the Add Samples screen',
+  };
+  return names[group] ?? group;
 }
 
 /**

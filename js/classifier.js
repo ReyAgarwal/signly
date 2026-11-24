@@ -248,3 +248,80 @@ export function evaluateAccuracy(samples, options = {}) {
     topConfusions: listConfusions(confusion),
   };
 }
+
+/**
+ * Picks up to `limit` samples of each letter, evenly spread out.
+ * @param {Array<{letter:string}>} samples - Samples to choose from.
+ * @param {number} limit - Max per letter (Infinity = keep all).
+ * @returns {Array<Object>} The chosen samples.
+ */
+function pickPerLetter(samples, limit) {
+  const chosen = [];
+  for (const letterSamples of groupByLetter(samples).values()) {
+    const count = Math.min(limit, letterSamples.length);
+    for (let i = 0; i < count; i++) {
+      chosen.push(letterSamples[Math.floor((i * letterSamples.length) / count)]);
+    }
+  }
+  return chosen;
+}
+
+/**
+ * The FAIR accuracy test ("leave one person out"). For each person (group)
+ * in the data: hide ALL of that person's samples, use everyone else as the
+ * k-NN samples, and count how many of the hidden person's signs are
+ * recognized. This shows how well the coach works for someone it has never
+ * seen, which is exactly the situation of a new user.
+ * @param {Array<{letter:string, group:string, features:number[]}>} samples - Samples with a person/group label.
+ * @param {{k?:number, testPerLetterPerGroup?:number}} options
+ *   testPerLetterPerGroup = test only this many signs per letter per person (faster).
+ * @returns {{total:number, correct:number, accuracy:number,
+ *   perLetter:Object<string,{total:number, correct:number}>,
+ *   perGroup:Object<string,{total:number, correct:number}>,
+ *   confusion:Object<string,Object<string,number>>,
+ *   topConfusions:Array<{actual:string, predicted:string, count:number}>}}
+ */
+export function evaluateUnseenPeople(samples, options = {}) {
+  const k = options.k ?? DEFAULT_K;
+  const limit = options.testPerLetterPerGroup ?? Infinity;
+  const groups = [...new Set(samples.map((sample) => sample.group))];
+
+  const perLetter = {};
+  const perGroup = {};
+  const confusion = {};
+  let correct = 0;
+  let total = 0;
+
+  for (const group of groups) {
+    const train = samples.filter((sample) => sample.group !== group);
+    const test = pickPerLetter(samples.filter((sample) => sample.group === group), limit);
+    perGroup[group] = { total: 0, correct: 0 };
+
+    for (const sample of test) {
+      const guess = classify(sample.features, train, k);
+      const predicted = guess ? guess.letter : '?';
+      const isRight = predicted === sample.letter;
+
+      perLetter[sample.letter] = perLetter[sample.letter] ?? { total: 0, correct: 0 };
+      perLetter[sample.letter].total += 1;
+      perGroup[group].total += 1;
+      total += 1;
+      if (isRight) {
+        perLetter[sample.letter].correct += 1;
+        perGroup[group].correct += 1;
+        correct += 1;
+      }
+      addToConfusion(confusion, sample.letter, predicted);
+    }
+  }
+
+  return {
+    total,
+    correct,
+    accuracy: total > 0 ? correct / total : 0,
+    perLetter,
+    perGroup,
+    confusion,
+    topConfusions: listConfusions(confusion),
+  };
+}

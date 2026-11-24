@@ -73,8 +73,8 @@ export function createFreeMode(app) {
     enter() {
       smoother.reset();
       showTypedText();
-      if (app.data.samples.length === 0) {
-        showNothing('No samples recorded yet. Go to Record and record a few letters first.');
+      if (app.pool.length === 0) {
+        showNothing('The coach has no reference hands loaded. Reload the page (see the message at the top).');
       } else {
         showNothing('');
       }
@@ -101,7 +101,7 @@ export function createFreeMode(app) {
      * @returns {{highlightFinger:null}} Free Sign doesn't highlight fingers.
      */
     onFrame(hand, nowMs) {
-      if (app.data.samples.length === 0) {
+      if (app.pool.length === 0) {
         return { highlightFinger: null };
       }
 

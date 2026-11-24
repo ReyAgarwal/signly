@@ -105,9 +105,9 @@ export function createSpellMode(app) {
    * @returns {void}
    */
   function startGame() {
-    const recorded = app.recordedLetters();
-    if (recorded.length === 0) {
-      say('No samples recorded yet. Go to Record and record some letters first.', 'bad');
+    const known = app.knownLetters();
+    if (known.length === 0) {
+      say('The coach has no reference hands loaded. Reload the page (see the message at the top).', 'bad');
       return;
     }
     if (!app.isTrackerReady()) {
@@ -115,14 +115,14 @@ export function createSpellMode(app) {
       return;
     }
 
-    const { words, usingPracticeWords } = chooseGameWords(recorded);
+    const { words, usingPracticeWords } = chooseGameWords(known);
     game = createSpellGame(words, performance.now());
     smoother.reset();
     getReadyUntilMs = performance.now() + GET_READY_MS;
     startButton.disabled = true;
     skipButton.disabled = false;
     if (usingPracticeWords) {
-      say('Using practice letter combos, because no real words can be made from your recorded letters yet. Record more letters (try C, A, T, H, I) to unlock words!');
+      say('Using practice letter combos, because no real words can be made from the letters the coach knows.');
     } else {
       say('Go! Sign the blue letter and hold it steady.');
     }
@@ -159,9 +159,10 @@ export function createSpellMode(app) {
    * Handles a letter the smoother locked in.
    * @param {string} letter - The locked-in letter.
    * @param {number} nowMs - Current performance.now() time.
+   * @param {Object} hand - The hand at that moment (used for "keep learning").
    * @returns {void}
    */
-  function handleLock(letter, nowMs) {
+  function handleLock(letter, nowMs, hand) {
     const result = submitLetter(game, letter, nowMs);
     if (result.outcome === 'game-over') {
       return;
@@ -170,6 +171,9 @@ export function createSpellMode(app) {
     // Progress is saved for the letter they were SUPPOSED to sign.
     const correct = result.outcome !== 'wrong';
     app.recordAttempt(result.expected, correct, 'spell');
+    if (correct) {
+      app.learnFrom(hand, result.expected, letter);
+    }
 
     if (result.outcome === 'wrong') {
       say('That looked like ' + letter + '. The next letter is ' + result.expected + '.', 'bad');
@@ -219,8 +223,8 @@ export function createSpellMode(app) {
     enter() {
       pictureBox.checked = app.settings.spellPictureHints;
       renderScoreboard(performance.now());
-      if (app.data.samples.length === 0) {
-        say('No samples recorded yet. Go to Record and record some letters first.', 'bad');
+      if (app.pool.length === 0) {
+        say('The coach has no reference hands loaded. Reload the page (see the message at the top).', 'bad');
       } else if (!game) {
         say('Press Start. You have 60 seconds to spell as many words as you can.');
       }
@@ -267,7 +271,7 @@ export function createSpellMode(app) {
       const { smooth } = app.recognize(hand, smoother, nowMs);
       setMeter(byId('spell-hold-bar'), smooth.holdProgress);
       if (smooth.lockedLetter) {
-        handleLock(smooth.lockedLetter, nowMs);
+        handleLock(smooth.lockedLetter, nowMs, hand);
       }
       return { highlightFinger: null };
     },

@@ -35,7 +35,8 @@ test('typing a letter picks it (lowercase works too), but not J or Z', () => {
 
 test('number keys and Esc switch screens from anywhere', () => {
   assert.equal(shortcutFor(press('1'), 'home'), 'go:alphabet');
-  assert.equal(shortcutFor(press('4'), 'spell'), 'go:learn');
+  assert.equal(shortcutFor(press('2'), 'spell'), 'go:learn');
+  assert.equal(shortcutFor(press('7'), 'home'), 'go:record');
   assert.equal(shortcutFor(press('Escape'), 'learn'), 'go:home');
 });
 

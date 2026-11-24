@@ -7,7 +7,9 @@
  * Everything we save lives in ONE object:
  *   {
  *     version: 1,
- *     samples:  [ { id, letter, features: [63 numbers], hand, time }, ... ],
+ *     samples:  [ { id, letter, features: [63 numbers], hand, time, source }, ... ],
+ *               (source = 'teacher' for samples added on the Add Samples screen,
+ *                or 'learned' for samples saved automatically from correct signs)
  *     attempts: [ { letter, correct, mode, time }, ... ],
  *     bestSpellScore: 0
  *   }
@@ -115,7 +117,10 @@ export function cleanData(raw) {
       if (isValidSample(sample)) {
         // Older or hand-made files might not have an ID, so we add one.
         const id = sample.id ?? makeSampleId(sample.time ?? Date.now());
-        data.samples.push({ ...sample, id: id });
+        // "learned" = saved automatically from the user's correct signs.
+        // Anything else (including old files) counts as added by a teacher.
+        const source = sample.source === 'learned' ? 'learned' : 'teacher';
+        data.samples.push({ ...sample, id: id, source: source });
       }
     }
   }
@@ -242,6 +247,7 @@ export const SETTINGS_KEY = 'aslFingerspellingCoach.settings';
 
 /** Settings used when nothing has been saved yet. */
 export const DEFAULT_SETTINGS = {
+  keepLearning: true,
   flipDiagrams: false,
   autoAdvance: true,
   spellPictureHints: true,
@@ -250,7 +256,7 @@ export const DEFAULT_SETTINGS = {
 /**
  * Loads settings, filling in defaults for anything missing or broken.
  * @param {Storage|null} storage - Where to load from (defaults to the browser's localStorage).
- * @returns {{flipDiagrams:boolean, autoAdvance:boolean, spellPictureHints:boolean}} The settings.
+ * @returns {{keepLearning:boolean, flipDiagrams:boolean, autoAdvance:boolean, spellPictureHints:boolean}} The settings.
  */
 export function loadSettings(storage = getBrowserStorage()) {
   const settings = { ...DEFAULT_SETTINGS };

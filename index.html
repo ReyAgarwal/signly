@@ -24,12 +24,12 @@
     </button>
     <nav class="nav" aria-label="Modes">
       <button type="button" data-screen="alphabet" title="Keyboard shortcut: 1">Alphabet</button>
-      <button type="button" data-screen="record" title="Keyboard shortcut: 2">Record</button>
-      <button type="button" data-screen="free" title="Keyboard shortcut: 3">Free Sign</button>
-      <button type="button" data-screen="learn" title="Keyboard shortcut: 4">Learn</button>
-      <button type="button" data-screen="spell" title="Keyboard shortcut: 5">Spell</button>
-      <button type="button" data-screen="progress" title="Keyboard shortcut: 6">Progress</button>
-      <button type="button" data-screen="data" title="Keyboard shortcut: 7">Test &amp; Data</button>
+      <button type="button" data-screen="learn" title="Keyboard shortcut: 2">Learn</button>
+      <button type="button" data-screen="spell" title="Keyboard shortcut: 3">Spell</button>
+      <button type="button" data-screen="free" title="Keyboard shortcut: 4">Free Sign</button>
+      <button type="button" data-screen="progress" title="Keyboard shortcut: 5">Progress</button>
+      <button type="button" data-screen="data" title="Keyboard shortcut: 6">Test &amp; Data</button>
+      <button type="button" data-screen="record" title="Keyboard shortcut: 7">Add Samples</button>
     </nav>
   </header>
 
@@ -50,9 +50,10 @@
     <section id="screen-home" class="screen" aria-labelledby="home-title">
       <h1 id="home-title">Learn to fingerspell in ASL</h1>
       <p class="lead">
-        Hold your hand up to the webcam. The coach recognizes the letter you're signing,
-        tells you which finger to fix, and tracks your progress. Everything runs on this
-        laptop: no internet needed, and no video ever leaves the computer.
+        Hold your hand up to the webcam. The coach compares your hand with thousands of
+        hands of real people signing, recognizes the letter, tells you which finger to fix,
+        and tracks your progress. Everything runs on this laptop: no internet needed, and
+        no video ever leaves the computer.
       </p>
 
       <p id="home-status" class="status-box"></p>
@@ -63,35 +64,35 @@
           <span class="tile-title">1. Alphabet</span>
           <span class="tile-text">Start here: a picture of every handshape, with tips and common mix-ups.</span>
         </button>
-        <button type="button" class="tile" data-screen="record">
-          <span class="tile-icon" aria-hidden="true">⏺</span>
-          <span class="tile-title">2. Record Samples</span>
-          <span class="tile-text">Teach the coach what each letter looks like using your own hands.</span>
-        </button>
-        <button type="button" class="tile" data-screen="free">
-          <span class="tile-icon" aria-hidden="true">🔤</span>
-          <span class="tile-title">3. Free Sign</span>
-          <span class="tile-text">Sign anything and see the letter and confidence live.</span>
-        </button>
         <button type="button" class="tile" data-screen="learn">
           <span class="tile-icon" aria-hidden="true">🎯</span>
-          <span class="tile-title">4. Learn</span>
+          <span class="tile-title">2. Learn</span>
           <span class="tile-text">Copy the picture, get finger hints, and move letter to letter with Enter.</span>
         </button>
         <button type="button" class="tile" data-screen="spell">
           <span class="tile-icon" aria-hidden="true">⏱</span>
-          <span class="tile-title">5. Spell-a-Word</span>
+          <span class="tile-title">3. Spell-a-Word</span>
           <span class="tile-text">Spell words letter by letter before the timer runs out.</span>
+        </button>
+        <button type="button" class="tile" data-screen="free">
+          <span class="tile-icon" aria-hidden="true">🔤</span>
+          <span class="tile-title">4. Free Sign</span>
+          <span class="tile-text">Sign anything and see the letter, the confidence, and the k-NN votes live.</span>
         </button>
         <button type="button" class="tile" data-screen="progress">
           <span class="tile-icon" aria-hidden="true">📈</span>
-          <span class="tile-title">6. Progress</span>
+          <span class="tile-title">5. Progress</span>
           <span class="tile-text">See your accuracy for every letter over time.</span>
         </button>
         <button type="button" class="tile" data-screen="data">
           <span class="tile-icon" aria-hidden="true">🧪</span>
-          <span class="tile-title">7. Test &amp; Data</span>
-          <span class="tile-text">Run the accuracy test, and export or import your data.</span>
+          <span class="tile-title">6. Test &amp; Data</span>
+          <span class="tile-text">How accurate is the coach? What does it know? Backups and "keep learning".</span>
+        </button>
+        <button type="button" class="tile" data-screen="record">
+          <span class="tile-icon" aria-hidden="true">⏺</span>
+          <span class="tile-title">7. Add Samples (teachers)</span>
+          <span class="tile-text">Optional: a fluent signer can add extra correct examples.</span>
         </button>
       </div>
 
@@ -102,10 +103,10 @@
         <tbody>
           <tr><td>Anywhere</td><td><kbd>1</kbd>–<kbd>7</kbd> open a screen (same order as the menu) · <kbd>Esc</kbd> Home</td></tr>
           <tr><td>Alphabet</td><td>Type a letter to practice it in Learn</td></tr>
-          <tr><td>Record</td><td><kbd>Space</kbd> or <kbd>Enter</kbd> record · <kbd>←</kbd> <kbd>→</kbd> change letter · type a letter to pick it</td></tr>
           <tr><td>Learn</td><td><kbd>Enter</kbd> or <kbd>→</kbd> next letter · <kbd>←</kbd> previous letter · type a letter to jump to it</td></tr>
-          <tr><td>Free Sign</td><td><kbd>Space</kbd> add a space · <kbd>Backspace</kbd> delete · <kbd>Delete</kbd> clear</td></tr>
           <tr><td>Spell</td><td><kbd>Enter</kbd> start / play again · <kbd>→</kbd> skip word</td></tr>
+          <tr><td>Free Sign</td><td><kbd>Space</kbd> add a space · <kbd>Backspace</kbd> delete · <kbd>Delete</kbd> clear</td></tr>
+          <tr><td>Add Samples</td><td><kbd>Space</kbd> or <kbd>Enter</kbd> record · <kbd>←</kbd> <kbd>→</kbd> change letter · type a letter to pick it</td></tr>
         </tbody>
       </table>
     </section>
@@ -153,9 +154,12 @@
       <div class="panel-column">
         <!-- ---------- RECORD ---------- -->
         <section id="panel-record" class="mode-panel" hidden aria-labelledby="record-title">
-          <h2 id="record-title">Record Samples</h2>
-          <p>Pick a letter, copy the picture, then press <strong>Record</strong> (or <kbd>Space</kbd>).
-            The coach saves one snapshot of your hand every tenth of a second for 3 seconds.</p>
+          <h2 id="record-title">Add Samples <span class="count-text">(for teachers)</span></h2>
+          <p class="notice">You don't need this screen to learn. The coach already knows every letter
+            from thousands of hands of real signers. Use it only if you are a <strong>fluent signer or
+            ASL teacher</strong> adding extra correct examples, because the coach will treat them as correct.</p>
+          <p>Pick a letter, make the sign, then press <strong>Record</strong> (or <kbd>Space</kbd>).
+            The coach saves one snapshot of the hand every tenth of a second for 3 seconds.</p>
           <div id="record-letter-grid" class="letter-grid" role="group" aria-label="Choose a letter to record"></div>
           <div class="selected-letter-row">
             <span id="record-selected" class="selected-letter">A</span>
@@ -296,30 +300,59 @@
     <section id="screen-data" class="screen" hidden aria-labelledby="data-title">
       <h1 id="data-title">Test &amp; Data</h1>
 
-      <h2>Accuracy test</h2>
+      <h2>How accurate is the coach?</h2>
       <p>
-        The test hides the newest 20% of each letter's samples, then asks the k-NN
-        classifier to recognize them using only the other 80%. It shows the overall
-        accuracy and which letters get mixed up.
+        A fair test: the coach hides <strong>all</strong> the signs of one person, then tries to
+        recognize them using only the <em>other</em> people's hands. It does this for every person,
+        so the score shows how well it works for someone it has never seen, like a new user.
       </p>
       <div class="button-row">
-        <button type="button" id="accuracy-run" class="button primary">Run accuracy test</button>
+        <button type="button" id="accuracy-run" class="button primary">Test on people it has never seen</button>
       </div>
+      <p id="accuracy-status" class="count-text" aria-live="polite"></p>
       <div id="accuracy-results" aria-live="polite"></div>
+
+      <h2>What the coach knows</h2>
+      <div class="summary-cards">
+        <div class="summary-card"><p class="label">Real signers' hands</p><p id="knowledge-reference" class="score-number">0</p><p class="count-text">built in, never changes</p></div>
+        <div class="summary-card"><p class="label">Added by teachers</p><p id="knowledge-teacher" class="score-number">0</p><p class="count-text">Add Samples screen</p></div>
+        <div class="summary-card"><p class="label">Learned from you</p><p id="knowledge-learned" class="score-number">0</p><p class="count-text">max 30 per letter</p></div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="keep-learning"> Keep learning from my correct signs</label>
+      <p class="note">
+        When you sign a letter correctly in Learn or Spell-a-Word, the coach can save that sign so it gets
+        used to your hand and camera. To make sure it never learns a mistake, it only saves a sign when
+        the <strong>real signers alone</strong> strongly agree it's correct (4 of the 5 closest matches).
+      </p>
+      <div class="button-row">
+        <button type="button" id="forget-learned" class="button danger-outline">Forget what it learned from me</button>
+      </div>
 
       <h2>Backup and share</h2>
       <p>
-        Samples are saved in this browser only. Export them to a file for a backup,
-        or to combine samples from several teammates (Import adds to what's already here).
+        Added samples, learned samples, and your progress are saved in this browser only. Export them to
+        a file for a backup, or Import a teammate's file (Import adds to what's already here).
       </p>
       <p id="data-summary" class="count-text"></p>
       <div class="button-row">
         <button type="button" id="export-button" class="button">⬇ Export data (.json)</button>
         <label class="button" for="import-file">⬆ Import data (.json)</label>
         <input type="file" id="import-file" accept=".json,application/json" class="visually-hidden">
-        <button type="button" id="delete-all" class="button danger-outline">Delete ALL samples and progress</button>
+        <button type="button" id="delete-all" class="button danger-outline">Delete added + learned samples and progress</button>
       </div>
       <p id="data-status" class="feedback" aria-live="polite"></p>
+
+      <h2>Where the real-signer data comes from</h2>
+      <p>The reference hands were made from photos in two public datasets, both shared under the
+        Creative Commons Attribution 4.0 (CC BY 4.0) license. We ran MediaPipe on the photos and kept
+        only the 21 hand points of each one; no photos are included in this app.</p>
+      <ul class="credits">
+        <li>Sowrow, A. R. A., Iftekhar, M. I. A. S., Prova, S. I., &amp; Huq, M. R. (2024).
+          <em>Images of American Sign Language (ASL) Alphabet Gestures</em> (Version 2). Mendeley Data.
+          doi:10.17632/48dg9vhmyk.2</li>
+        <li>Cabana Garceran del Vall, E. (2026). <em>American Sign Language Image Dataset (fingerspelling
+          original + keypoints + evaluation)</em> (Version 1). Mendeley Data. doi:10.17632/97yd3b5f5h.1</li>
+      </ul>
     </section>
   </main>
 </body>

@@ -4,19 +4,19 @@
  * The Learn screen: practice one letter at a time with live coaching.
  *
  *   1. Pick a target letter (click it, type it, or press Enter for the next one).
- *   2. A diagram shows how to make the handshape (drawn by diagram.js). If the
- *      team recorded samples for this letter, a small skeleton also shows the
- *      average of those samples.
+ *   2. A diagram shows how to make the handshape (drawn by diagram.js), and a
+ *      small skeleton shows the AVERAGE hand of real signers for this letter.
  *   3. While you sign, the coach compares your finger bends to the template
- *      (the average of the recorded samples) and tells you which finger to fix.
+ *      (the real signers' average) and tells you which finger to fix.
  *      That finger turns red on the camera AND on the diagram.
  *   4. Hold the correct letter steady for 0.5 s: success animation! With
  *      auto-advance on, the next letter comes up by itself.
  *
- * Letters with no recorded samples can still be studied from the diagram,
- * but the coach can't check them until someone records samples.
+ * If the reference data failed to load, letters can still be studied from
+ * the diagram, but the coach can't check them.
  *
  * Every locked-in letter is saved as a progress attempt (right or wrong).
+ * Correct signs may also be learned from (see learning.js).
  */
 
 import { STATIC_LETTERS, LETTER_TIPS, LETTER_MIXUPS } from '../letters.js';
@@ -96,7 +96,7 @@ export function createLearnMode(app) {
     byId('learn-no-samples').hidden = hasSamples;
 
     if (hasSamples) {
-      byId('reference-caption').textContent = 'Average of your ' + template.count + ' samples';
+      byId('reference-caption').textContent = 'Average of ' + template.count + ' real signers\' hands';
       drawReferenceHand(referenceCanvas, template.points, { flipX: app.handMirrored });
       hintText.className = 'hint';
       hintText.textContent = 'Make the letter ' + targetLetter + ' and hold it steady.';
@@ -105,7 +105,7 @@ export function createLearnMode(app) {
     byId('reference-caption').textContent = 'No samples yet';
     drawReferenceHand(referenceCanvas, null);
     byId('learn-no-samples-text').textContent = 'Study the picture! The coach can\'t check ' + targetLetter
-      + ' yet because no samples of it have been recorded.';
+      + ' right now because it has no reference hands for it.';
     byId('learn-record-this').textContent = '⏺ Record ' + targetLetter + ' now';
   }
 
@@ -169,14 +169,16 @@ export function createLearnMode(app) {
   /**
    * Handles a letter that just locked in: success (maybe auto-advance) or "try again".
    * @param {string} lockedLetter - The letter the smoother locked in.
+   * @param {Object} hand - The hand at that moment (used for "keep learning").
    * @returns {void}
    */
-  function handleLock(lockedLetter) {
+  function handleLock(lockedLetter, hand) {
     const correct = lockedLetter === targetLetter;
     app.recordAttempt(targetLetter, correct, 'learn');
     if (!correct) {
       return;
     }
+    app.learnFrom(hand, targetLetter, lockedLetter);
     showSuccessBurst('You signed ' + targetLetter + '!');
     showLetterGrid();
     if (app.settings.autoAdvance) {
@@ -277,7 +279,7 @@ export function createLearnMode(app) {
 
       seeingText.textContent = 'I see: ' + guess.letter + ' (' + formatPercent(guess.confidence) + ' confident)';
       if (smooth.lockedLetter) {
-        handleLock(smooth.lockedLetter);
+        handleLock(smooth.lockedLetter, hand);
       }
       drawReferenceHand(referenceCanvas, template.points, { flipX: hand.mirrored });
 

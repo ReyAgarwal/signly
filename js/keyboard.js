@@ -6,7 +6,7 @@
  *
  *   Anywhere:     1-7 = open a screen, Esc = Home
  *   Alphabet:     type a letter = practice that letter in Learn
- *   Record:       Space or Enter = record, ← → = change letter, type a letter = pick it
+ *   Add Samples:  Space or Enter = record, ← → = change letter, type a letter = pick it
  *   Learn:        Enter or → = next letter, ← = previous letter, type a letter = pick it
  *   Free Sign:    Space = add a space, Backspace = delete, Delete = clear
  *   Spell:        Enter = start / play again, → = skip word
@@ -21,12 +21,12 @@ import { isStaticLetter } from './letters.js';
 /** Number keys open these screens, in the same order as the top menu. */
 export const SCREEN_NUMBER_KEYS = {
   1: 'alphabet',
-  2: 'record',
-  3: 'free',
-  4: 'learn',
-  5: 'spell',
-  6: 'progress',
-  7: 'data',
+  2: 'learn',
+  3: 'spell',
+  4: 'free',
+  5: 'progress',
+  6: 'data',
+  7: 'record',
 };
 
 /** Shortcuts that only work on one screen: screen -> key -> action. */

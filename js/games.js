@@ -11,7 +11,7 @@
  *   - "Skip" moves to the next word.
  *   - When time runs out, the game is over.
  *
- * Only words made from letters you have recorded samples for are used.
+ * Only words made from letters the coach can recognize are used.
  * If no real words fit, we make random "practice words" from your letters.
  *
  * The game "state" is a plain object, so it's easy to test and to inspect.
@@ -103,12 +103,12 @@ export function shuffle(items, random = Math.random) {
 
 /**
  * Builds the list of words for one game.
- * @param {string[]} recordedLetters - Letters that have recorded samples.
+ * @param {string[]} knownLetters - Letters the coach can recognize.
  * @param {function(): number} random - Random number source (0 to 1).
  * @returns {{words:string[], usingPracticeWords:boolean}} Words in play order.
  */
-export function chooseGameWords(recordedLetters, random = Math.random) {
-  const allowed = new Set(recordedLetters);
+export function chooseGameWords(knownLetters, random = Math.random) {
+  const allowed = new Set(knownLetters);
   const playable = pickPlayableWords(WORD_LIST, allowed);
   if (playable.length > 0) {
     return { words: shuffle(playable, random), usingPracticeWords: false };
@@ -117,7 +117,7 @@ export function chooseGameWords(recordedLetters, random = Math.random) {
   // No real words fit, so make 10 practice "words" of 3 random letters each.
   const practiceWords = [];
   for (let i = 0; i < 10; i++) {
-    practiceWords.push(makePracticeWord(recordedLetters, 3, random));
+    practiceWords.push(makePracticeWord(knownLetters, 3, random));
   }
   return { words: practiceWords, usingPracticeWords: true };
 }
