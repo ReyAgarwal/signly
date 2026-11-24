@@ -38,9 +38,11 @@ Full citations are in `data/ATTRIBUTION.md`.
 6. **Pick the letter photos** (shown next to the diagrams): with the hand points of
    candidate photos from dataset 1 saved as `tools/landmarks-photos.json`, run
    `node tools/rank-photos.mjs` (most typical photo per person) and then
-   `node tools/orient-photos.mjs` (mirror or not, by matching the diagram). The chosen
-   photos were cropped around the hand and resized to 260 px; the list is in
-   `js/letterPhotos.js`. J and Z (moving letters) are not in the ranking (the coach has
+   `node tools/orient-photos.mjs` (mirror or not, by matching the diagram). The list is in
+   `js/letterPhotos.js`. Then, with the original photos in `tools/photos/`, run
+   `node tools/crop-photos.mjs`: it cuts away the white bars the dataset added around each
+   photo and makes every photo a 300 × 300 square (empty edges filled with a blurred copy),
+   so they all look the same size in the app. J and Z (moving letters) are not in the ranking (the coach has
    no answer key for them); their photos were chosen separately and are single moments
    from the movement.
 

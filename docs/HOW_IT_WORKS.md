@@ -385,6 +385,13 @@ photos, so instead we compared each photo's 21 points with the diagram's 21
 points, as-is and flipped, after turning them to the best-matching angle
 (a "Procrustes" fit), and kept whichever matched better (`tools/orient-photos.mjs`).
 
+The dataset's photos are 300 × 300, but most are really a narrower photo with
+white bars added. `tools/crop-photos.mjs` finds the real photo inside the bars
+(ffmpeg's `cropdetect` finds black borders, so we run it on the photo's
+*negative*, where white turns black), and fits it into a square whose empty
+edges are filled with a blurred copy of the same photo. Now every photo is the
+same size and shape, so they line up neatly side by side.
+
 ## The fair accuracy test: "leave one person out" (classifier.js → evaluateUnseenPeople)
 
 How well does the coach work for a **brand-new person**? We can't just test on
@@ -500,6 +507,13 @@ The result is 21 points in the **same order MediaPipe uses**, so the same
   ring purple, pinky teal), and the finger a hint is about turns **red**.
 - **Depth shading:** parts that are farther away are mixed with a little gray
   (up to 22%), so you can see which fingers are in front.
+- **Finger name tags** (`placeFingerLabels`): each finger gets a tag at the
+  part that sticks out the most from the middle of the palm (the tip of a
+  straight finger, the knuckle of a curled one). The tag goes **outside the box
+  around the hand**, on the nearest side but never the forearm's side, with a
+  dotted line back to the finger. Tags that overlap are pushed apart a little at
+  a time (and kept outside the box) until none touch. A unit test checks every
+  letter, both hands: 5 tags, no overlaps, none covering the hand.
 - **Drag to turn:** in Learn and Spell you can drag the diagram to look at the
   hand from other sides. Dragging adds two extra rotations (left-right and
   up-down) after the recipe's own view; double-click resets.
@@ -556,4 +570,29 @@ Fingerspelling has two halves: **signing** and **reading**. The quiz shows a
 real photo (or a diagram) and 4 letters. `makeQuestion` picks up to 2 wrong
 choices from the answer's look-alike group (for example N for M), then fills the
 rest randomly, so the quiz practices exactly the differences people confuse.
+
+## Fact-checking the written instructions (letters.js)
+
+Each letter's instructions are 2–3 short steps: the handshape, where the thumb
+goes, and which way the palm faces. "Toward your other hand" is used instead of
+"left" or "right", so the same words work for right- and left-handed signers.
+
+We compared every letter with Lifeprint / ASL University, Signing Savvy's
+"Common fingerspelling mistakes", and Wikipedia's "American manual alphabet".
+What changed:
+
+- **R:** the middle finger crosses **behind** the index finger. Our diagram had
+  it in front, so we redrew it. We also checked the real signers' data: in R
+  the index fingertip is measured closer to the camera than in U (where the
+  fingers aren't crossed), which agrees.
+- **M / N / T:** the thumb tip peeks out between ring and pinky (M), middle and
+  ring (N), or index and middle (T). M and N fingers drape over the thumb
+  instead of squeezing into a tight fist.
+- **G / H:** the palm faces **you**, fingers pointing sideways.
+- **C / O:** the palm faces mostly forward, turned only a little to the side.
+- **E:** the fingertips rest on the thumb (a big gap is a common mistake).
+- **P:** the K handshape with the wrist bent, so the middle finger points down;
+  "the change from K to P is all wrist."
+- **J / Z:** left-handed signers draw them as a mirror image (the Left switch
+  flips the arrows too).
 

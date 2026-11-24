@@ -264,13 +264,14 @@ export const DEFAULT_SETTINGS = {
   flipDiagrams: false,
   autoAdvance: true,
   spellPictureHints: true,
+  showPhotos: true,
 };
 
 /**
  * Loads settings, filling in defaults for anything missing or broken.
  * @param {Storage|null} storage - Where to load from (defaults to the browser's localStorage).
  * @returns {{challengeDifficulty:string, keepLearning:boolean, flipDiagrams:boolean, autoAdvance:boolean,
- *   spellPictureHints:boolean}} The settings.
+ *   spellPictureHints:boolean, showPhotos:boolean}} The settings.
  */
 export function loadSettings(storage = getBrowserStorage()) {
   const settings = { ...DEFAULT_SETTINGS };

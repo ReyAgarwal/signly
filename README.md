@@ -21,9 +21,9 @@ signing, tells you which finger to fix, and tracks your progress over time.
 | Screen | What it does |
 |--------|--------------|
 | **Home** | Big buttons for every mode, a status line ("120 samples recorded for 4 letters..."), and a list of keyboard shortcuts |
-| **Alphabet** | **Study chart:** a **diagram and a real photo of all 26 letters**, with how-to text and a "Watch out" note about the letter it's most often confused with. **J and Z** are shown with a bold arrow (a dot marks where the movement starts) and marked "not checked by the coach yet" (the coach looks at one still picture at a time). Click or type a letter to practice it; printable. **Reading quiz:** "Which letter is this?" Shows a real signer's photo (or a diagram) and 4 choices, usually including look-alikes. No camera needed; reading fingerspelling is half the skill. |
+| **Alphabet** | **Study chart:** a **diagram and a real photo of all 26 letters**, with numbered how-to steps and a "Watch out" note about the letter it's most often confused with. **J and Z** are shown with a bold arrow (a dot marks where the movement starts) and marked "not checked by the coach yet" (the coach looks at one still picture at a time). Click or type a letter to practice it; printable. **Reading quiz:** "Which letter is this?" Shows a real signer's photo (or a diagram) and 4 choices, usually including look-alikes. No camera needed; reading fingerspelling is half the skill. |
 | **Free Sign** | Sign anything. Shows the recognized letter, the confidence %, the actual k-NN neighbor votes, and types out letters you hold steady. |
-| **Learn** | Two ways to practice. **Whole alphabet:** go through A–Y one letter at a time (turn off "go to the next letter" to repeat the same letter; a counter shows how many times in a row you got it). **Practice set:** choose one letter or a few (or a quick pick: *my weakest letters*, or look-alike groups like M · N or A · S · T · E), how many times each, and mixed or in order; at the end a summary shows how many tries each letter took, with *Practice just the tricky ones*. For every letter: a **diagram you can drag to turn**, **two real photos**, the **average real signer's hand**, and live hints that draw the finger to fix in **red** on the camera *and* the diagram. |
+| **Learn** | Two ways to practice. **Whole alphabet:** go through A–Y one letter at a time (turn off "go to the next letter" to repeat the same letter; a counter shows how many times in a row you got it). **Practice set:** choose one letter or a few (or a quick pick: *my weakest letters*, or look-alike groups like M · N or A · S · T · E), how many times each, and mixed or in order; at the end a summary shows how many tries each letter took, with *Practice just the tricky ones*. For every letter: **numbered steps** (handshape, thumb, which way the palm faces), a **diagram with finger name tags** that you can drag to turn, **two real photos side by side**, the **average real signer's hand**, and live hints that draw the finger to fix in **red** on the camera *and* the diagram. |
 | **Spell** | Type **any word or sentence** (your name, "Nice to meet you"...) and the coach teaches you to fingerspell it, letter by letter: diagram, real photos, tip, live finger hints, and a camera check that moves on when you get each letter right. J and Z (motion letters) get a movement diagram and written instructions. |
 | **Challenge** | Timed game: spell as many words as you can. **Easy** (2–3 letters, 90 s), **Medium** (3–4 letters, 60 s, ×2 points), or **Hard** (4–6 letters, 45 s, ×3 points, no picture hints). Best score saved for each level. |
 | **Progress** | Accuracy for every letter, and for every day, so you can see improvement over time. |
@@ -32,7 +32,9 @@ signing, tells you which finger to fix, and tracks your progress over time.
 
 ### On every page
 
-- **Right / Left hand switch** (top right): left-handed signers sign with their left hand, which is correct ASL. The switch flips every diagram.
+- **Right / Left hand switch** (top right): left-handed signers sign with their left hand, which is correct ASL. The switch flips every diagram and photo.
+- **Photos On / Off switch** (next to it): hides the real photos everywhere, so the diagrams get the space (the reading quiz then uses diagrams).
+- **Layout that fits the window:** the diagram and photos are sized as shares of the card's width, so they grow and shrink together; on a narrow window the diagram gets its own row and the photos sit side by side under it.
 - **Finger color key** under the camera: an open hand showing which color is which finger (the same colors as the live skeleton; red = the finger to fix).
 - **"Did you know?" fun facts** about ASL, fingerspelling, Deaf culture, and how the coach works.
 - **Practice streak** (days in a row) on Home and Progress, and **"Practice next"** suggestions on Progress. Learn shows how many letters you've mastered, and Free Sign shows a picture of the letter it recognized.
@@ -69,7 +71,19 @@ redrawn to match photos of real signers (the K handshape with the hand pointing 
 the camera: index up, middle finger down), after which the coach recognizes 21 of 24 drawings.
 
 You can **drag a diagram to turn the hand** in Learn and Spell (double-click to reset),
-and farther-away parts are shaded slightly darker so you can see what's in front.
+and farther-away parts are shaded slightly darker so you can see what's in front. The big
+diagrams also have **finger name tags** (Thumb, Index, Middle, Ring, Pinky), placed around
+the outside of the hand with dotted lines, so it's clear which finger is which.
+
+### Are the instructions right?
+
+The written steps for every letter were **fact-checked** (November 2026) against Lifeprint /
+ASL University, Signing Savvy's list of common fingerspelling mistakes, and Wikipedia's
+"American manual alphabet" article. That check fixed a few things, including **R** (the
+middle finger crosses *behind* the index, so the diagram was redrawn), where the thumb tip
+peeks out for **M, N, T**, the palm facing you for **G and H**, and mirror-image **J and Z**
+for left-handed signers. Sources are listed in `js/letters.js`. An ASL teacher's review is
+still the best final check.
 
 ### Where the "answer key" comes from
 

@@ -16,7 +16,7 @@ import { byId, makeElement, renderLetterPhotos } from './ui.js';
 /**
  * Creates the quiz.
  * @param {Object} app - Shared app helpers and data (see main.js), for settings.
- * @returns {{show:function, hide:function, isOpen:function, answer:function, next:function}} The quiz.
+ * @returns {{show:function, hide:function, isOpen:function, answer:function, next:function, redraw:function}} The quiz.
  */
 export function createQuiz(app) {
   let question = null;
@@ -27,7 +27,7 @@ export function createQuiz(app) {
   let open = false;
 
   const feedback = byId('quiz-feedback');
-  const useDiagrams = byId('quiz-use-diagrams');
+  let photoChoice = 0;
 
   /**
    * Updates the score and streak chips.
@@ -36,6 +36,26 @@ export function createQuiz(app) {
   function showScore() {
     byId('quiz-score').textContent = right + ' / ' + asked + ' correct';
     byId('quiz-streak').textContent = 'Streak ' + streak + (streak >= 3 ? ' 🔥' : '');
+  }
+
+  /**
+   * Draws the question's picture: a photo, or a diagram when the Photos switch is Off.
+   * @returns {void}
+   */
+  function showPicture() {
+    const picture = byId('quiz-picture');
+    picture.replaceChildren();
+    if (!question) {
+      return;
+    }
+    if (!app.settings.showPhotos) {
+      picture.append(createHandDiagram(question.answer, { flipX: app.settings.flipDiagrams, className: 'hand-diagram quiz-diagram' }));
+      return;
+    }
+    const holder = makeElement('div', 'letter-photos');
+    renderLetterPhotos(holder, question.answer, app.settings.flipDiagrams, 2);
+    const photos = Array.from(holder.children);
+    picture.append(photos[Math.min(photoChoice, photos.length - 1)]);
   }
 
   /**
@@ -48,17 +68,9 @@ export function createQuiz(app) {
     feedback.textContent = '';
     feedback.className = 'feedback';
 
-    const picture = byId('quiz-picture');
-    picture.replaceChildren();
-    if (useDiagrams.checked) {
-      picture.append(createHandDiagram(question.answer, { flipX: app.settings.flipDiagrams, className: 'hand-diagram quiz-diagram' }));
-    } else {
-      // Show ONE photo, picked at random from the two people.
-      const holder = makeElement('div', 'letter-photos');
-      renderLetterPhotos(holder, question.answer, app.settings.flipDiagrams, 2);
-      const photos = Array.from(holder.children);
-      picture.append(photos[Math.floor(Math.random() * photos.length)]);
-    }
+    // Show ONE photo, picked at random from the two people.
+    photoChoice = Math.floor(Math.random() * 2);
+    showPicture();
 
     const choices = byId('quiz-choices');
     choices.replaceChildren();
@@ -105,7 +117,6 @@ export function createQuiz(app) {
   }
 
   byId('quiz-next').addEventListener('click', next);
-  useDiagrams.addEventListener('change', next);
 
   return {
     /** Opens the quiz tab. @returns {void} */
@@ -125,5 +136,7 @@ export function createQuiz(app) {
     },
     answer,
     next,
+    /** Redraws the picture (after the Photos or Right / Left switch changes). @returns {void} */
+    redraw: showPicture,
   };
 }

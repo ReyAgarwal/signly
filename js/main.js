@@ -283,12 +283,36 @@ function setHand(hand) {
 }
 
 /**
+ * Shows or hides the real-signer photos everywhere (the Photos switch in the header).
+ * @param {boolean} show - True to show the photos.
+ * @returns {void}
+ */
+function setPhotos(show) {
+  setSetting('showPhotos', show);
+  showPhotoSwitch();
+  quiz.redraw();
+}
+
+/**
+ * Updates the Photos switch to match the setting. The photos themselves are
+ * hidden with CSS (the "hide-photos" class on <body>), so nothing is redrawn.
+ * @returns {void}
+ */
+function showPhotoSwitch() {
+  const current = app.settings.showPhotos ? 'show' : 'hide';
+  for (const button of document.querySelectorAll('.photo-switch button')) {
+    button.setAttribute('aria-checked', String(button.dataset.photos === current));
+  }
+  document.body.classList.toggle('hide-photos', !app.settings.showPhotos);
+}
+
+/**
  * Updates the Right / Left switch in the header to match the setting.
  * @returns {void}
  */
 function showHandSwitch() {
   const current = app.settings.flipDiagrams ? 'left' : 'right';
-  for (const button of document.querySelectorAll('.hand-switch button')) {
+  for (const button of document.querySelectorAll('.hand-switch button[data-hand]')) {
     button.setAttribute('aria-checked', String(button.dataset.hand === current));
   }
 }
@@ -306,6 +330,7 @@ function refreshDiagrams() {
   }
   if (currentScreen === 'alphabet') {
     renderAlphabet();
+    quiz.redraw();
   }
   if (modes[currentScreen] && modes[currentScreen].refreshDiagrams) {
     modes[currentScreen].refreshDiagrams();
@@ -901,8 +926,11 @@ function setUpEventListeners() {
   document.addEventListener('keydown', onKeyDown);
   byId('banner-close').addEventListener('click', hideBanner);
   byId('alphabet-print').addEventListener('click', () => window.print());
-  for (const button of document.querySelectorAll('.hand-switch button')) {
+  for (const button of document.querySelectorAll('.hand-switch button[data-hand]')) {
     button.addEventListener('click', () => setHand(button.dataset.hand));
+  }
+  for (const button of document.querySelectorAll('.photo-switch button')) {
+    button.addEventListener('click', () => setPhotos(button.dataset.photos === 'show'));
   }
   byId('alphabet-tab-chart').addEventListener('click', () => showAlphabetTab('chart'));
   byId('alphabet-tab-quiz').addEventListener('click', () => showAlphabetTab('quiz'));
@@ -985,6 +1013,7 @@ async function start() {
   quiz = createQuiz(app);
   setUpEventListeners();
   showHandSwitch();
+  showPhotoSwitch();
   renderFingerKey(byId('camera-key'), { flipX: app.settings.flipDiagrams });
   renderFingerKey(byId('alphabet-key'), { flipX: app.settings.flipDiagrams });
 

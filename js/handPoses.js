@@ -187,8 +187,11 @@ export const LETTER_POSES = {
   },
   R: {
     view: FACING_YOU,
-    // Index and middle fingers crossed: the middle finger leans over the index.
-    fingers: { index: straight(7), middle: bent(-13, 12, 0, 0), ring: folded(3), pinky: folded(6) },
+    // Index and middle fingers crossed. Seen from the front (palm facing you),
+    // the middle finger crosses BEHIND the index: the index bends slightly
+    // forward and the middle finger leans back over it (checked against
+    // Lifeprint and against the depth of real signers' fingertips).
+    fingers: { index: bent(8, 14, 4, 0), middle: bent(-13, -4, 0, 0), ring: folded(3), pinky: folded(6) },
     thumb: { base: [0.1, 0.8, 0.6], reach: [-0.95, 3.95, 2.15], layer: 'front' },
   },
   S: {

@@ -20,9 +20,10 @@ normalized them (wrist at the origin, palm size 1, left hands mirrored), rounded
 
 **Letter photos (`images/letters/`):** two photos per letter (A–Z), each from a
 different person in dataset 1. Changes we made: picked the most typical photo of
-each person (`tools/rank-photos.mjs`), cropped around the hand, resized so the
-longest side is 260 pixels, saved as JPEG, and **mirrored some left-right** so they
-match the app's right-hand diagrams (`tools/orient-photos.mjs`; which ones is listed
-in `js/letterPhotos.js`). The photos show only hands.
+each person (`tools/rank-photos.mjs`), **mirrored some left-right** so they match the
+app's right-hand diagrams (`tools/orient-photos.mjs`; which ones is listed in
+`js/letterPhotos.js`), cut away the white and black bars around the photo, and fit it
+into a 300 × 300 square whose empty edges are filled with a blurred copy of the same
+photo (`tools/crop-photos.mjs`). The photos show only hands.
 
 `reference-hands.json` and the letter photos are shared under the same CC BY 4.0 license.

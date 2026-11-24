@@ -11,7 +11,7 @@
  * so text from an imported file can never be run as code.
  */
 
-import { STATIC_LETTERS, ALPHABET, LETTER_TIPS, LETTER_MIXUPS, isMotionLetter } from './letters.js';
+import { STATIC_LETTERS, ALPHABET, LETTER_STEPS, LETTER_MIXUPS, isMotionLetter } from './letters.js';
 import { statsByLetter, statsByDay, letterHistory, overallStats } from './progress.js';
 import { createHandDiagram } from './diagram.js';
 import { LETTER_PHOTOS } from './letterPhotos.js';
@@ -246,7 +246,12 @@ export function renderAlphabetChart(container, options) {
     if (moves) {
       card.append(makeElement('span', 'motion-badge', '↻ Moves · not checked by the coach yet'));
     }
-    card.append(makeElement('span', 'card-tip', LETTER_TIPS[letter]));
+    // Numbered steps. (Spans, not a list, because a list isn't allowed inside a button.)
+    const steps = makeElement('span', 'card-steps');
+    LETTER_STEPS[letter].forEach((text, index) => {
+      steps.append(makeElement('span', 'card-step', (index + 1) + '. ' + text));
+    });
+    card.append(steps);
     card.append(makeElement('span', 'mixup', LETTER_MIXUPS[letter]));
 
     if (options.mastered.has(letter)) {
@@ -255,6 +260,19 @@ export function renderAlphabetChart(container, options) {
 
     card.addEventListener('click', () => options.onPick(letter));
     container.append(card);
+  }
+}
+
+/**
+ * Fills a numbered list with the steps for making a letter (from letters.js).
+ * @param {HTMLOListElement} list - The <ol> to fill.
+ * @param {string} letter - The letter.
+ * @returns {void}
+ */
+export function renderSteps(list, letter) {
+  list.replaceChildren();
+  for (const text of LETTER_STEPS[letter] ?? []) {
+    list.append(makeElement('li', '', text));
   }
 }
 

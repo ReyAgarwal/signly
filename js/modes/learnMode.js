@@ -16,7 +16,7 @@
  * to fix turns red), and a success animation when you hold it correctly.
  */
 
-import { STATIC_LETTERS, LETTER_TIPS, LETTER_MIXUPS } from '../letters.js';
+import { STATIC_LETTERS, LETTER_MIXUPS } from '../letters.js';
 import { LetterSmoother, HintSmoother } from '../smoothing.js';
 import { findFingerToFix, hintMessage } from '../hints.js';
 import { drawReferenceHand } from '../draw.js';
@@ -25,7 +25,9 @@ import {
   createDrill, currentDrillLetter, recordDrillSign, skipDrillLetter, isDrillDone, summarizeDrill,
   DRILL_PRESETS, MIN_REPEATS, MAX_REPEATS,
 } from '../drill.js';
-import { byId, makeElement, setMeter, renderLetterGrid, showSuccessBurst, formatPercent, renderLetterPhotos } from '../ui.js';
+import {
+  byId, makeElement, setMeter, renderLetterGrid, showSuccessBurst, formatPercent, renderLetterPhotos, renderSteps,
+} from '../ui.js';
 
 /** After picking a letter, give the user this long to get their hand ready. */
 const GET_READY_MS = 1500;
@@ -74,7 +76,7 @@ export function createLearnMode(app) {
       return;
     }
     shownDiagramKey = key;
-    renderHandDiagram(diagram, targetLetter, { flipX, highlightFinger, turn });
+    renderHandDiagram(diagram, targetLetter, { flipX, highlightFinger, turn, labels: true });
   }
 
   /**
@@ -165,7 +167,7 @@ export function createLearnMode(app) {
     getReadyUntilMs = performance.now() + GET_READY_MS;
 
     byId('learn-letter').textContent = letter;
-    byId('learn-tip').textContent = LETTER_TIPS[letter];
+    renderSteps(byId('learn-steps'), letter);
     byId('learn-mixup').textContent = LETTER_MIXUPS[letter];
     renderLetterPhotos(byId('learn-photos'), letter, app.settings.flipDiagrams);
     showPosition();

@@ -70,6 +70,15 @@ const MIN_VIEW_SIZE = 9.6;
 
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
+/** Names written on the finger labels. */
+const LABEL_NAMES = { thumb: 'Thumb', index: 'Index', middle: 'Middle', ring: 'Ring', pinky: 'Pinky' };
+
+/** Size of the label text, as a share of the picture's size (so every diagram's labels look the same size). */
+const LABEL_FONT_SHARE = 0.058;
+
+/** How far past the end of its finger a label is placed. */
+const LABEL_GAP = 1.1;
+
 /**
  * Flattens a 3D point to 2D drawing coordinates.
  * @param {number[]} point - [x, y, z] from the hand model (y points up).
@@ -215,6 +224,16 @@ export function buildDiagramShapes(hand, options = {}) {
   shapes.sort((first, second) => first.depth - second.depth);
 
   const framePoints = points.map((p) => project(p, flipX));
+  if (options.labels) {
+    // Finger name tags go on top of the hand, so they're added after sorting.
+    // Their text size follows the size of the hand's picture frame.
+    const fontSize = computeViewBox(framePoints)[2] * LABEL_FONT_SHARE;
+    for (const label of placeFingerLabels(hand, flipX, options.showForearm !== false, fontSize)) {
+      shapes.push({ type: 'label', ...label, highlighted: label.finger === highlight, depth: Infinity });
+      framePoints.push([label.at[0] - label.width / 2, label.at[1] - label.height / 2]);
+      framePoints.push([label.at[0] + label.width / 2, label.at[1] + label.height / 2]);
+    }
+  }
   if (options.motion) {
     // The movement arrow goes on top of everything (so it's added last).
     const motionShape = makeMotionShape(points, options.motion, flipX);
@@ -222,6 +241,183 @@ export function buildDiagramShapes(hand, options = {}) {
     framePoints.push(...motionShape.points);
   }
   return { shapes, viewBox: computeViewBox(framePoints) };
+}
+
+/**
+ * Decides where each finger's name tag goes, so the picture shows which finger
+ * is which, without covering the hand.
+ *
+ * 1. Each finger is labeled at the part that sticks out the most (measured from
+ *    the middle of the palm): the fingertip for a straight finger, or the
+ *    knuckle for a curled one.
+ * 2. The tag goes OUTSIDE the box around the hand, on the side nearest that
+ *    point (top, left, right, or bottom), but never on the forearm's side.
+ * 3. Tags that overlap are pushed apart, a little at a time, and always kept
+ *    outside the hand's box. A dotted line connects each tag to its finger.
+ * @param {{landmarks:number[][], forearmEnd:number[]}} hand - The 3D hand from handModel.js.
+ * @param {boolean} flipX - True if the picture is mirrored.
+ * @param {boolean} showForearm - Whether the forearm is drawn (its side is then off limits).
+ * @param {number} fontSize - Text size in picture units.
+ * @returns {Array<{finger:string, name:string, anchor:number[], at:number[], width:number, height:number, side:string, fontSize:number}>}
+ *   One tag per finger: anchor = the point it labels, at = the tag's center.
+ */
+export function placeFingerLabels(hand, flipX = false, showForearm = true, fontSize = 0.6) {
+  const flat = hand.landmarks.map((p) => project(p, flipX));
+  // Middle of the palm: the average of the wrist and the four knuckles.
+  const palmPoints = [flat[0], flat[5], flat[9], flat[13], flat[17]];
+  const palm = [0, 1].map((axis) => palmPoints.reduce((sum, p) => sum + p[axis], 0) / palmPoints.length);
+  const box = handBox(flat);
+  const sides = allowedSides(flat[0], project(hand.forearmEnd, flipX), showForearm);
+
+  const labels = [];
+  for (const [finger, first] of Object.entries(FIRST_LANDMARK)) {
+    // The three points past the knuckle: middle joint, top joint, and tip.
+    let anchor = flat[first + 1];
+    for (let i = first + 2; i <= first + 3; i++) {
+      if (Math.hypot(flat[i][0] - palm[0], flat[i][1] - palm[1]) > Math.hypot(anchor[0] - palm[0], anchor[1] - palm[1])) {
+        anchor = flat[i];
+      }
+    }
+    const name = LABEL_NAMES[finger];
+    const label = {
+      finger, name, anchor, at: [0, 0], fontSize,
+      // A rough text width: each letter is about 0.62 of the font size wide.
+      width: name.length * fontSize * 0.62 + fontSize * 0.8,
+      height: fontSize * 1.55,
+      side: nearestSide(anchor, box, sides),
+    };
+    label.at = [anchor[0], anchor[1]];
+    keepOutside(label, box);
+    labels.push(label);
+  }
+  separateLabels(labels, box);
+  return labels;
+}
+
+/**
+ * The box around the hand's points, with a little extra for finger thickness.
+ * @param {number[][]} flat - 2D hand points.
+ * @returns {{left:number, right:number, top:number, bottom:number}} The box.
+ */
+function handBox(flat) {
+  const xs = flat.map((p) => p[0]);
+  const ys = flat.map((p) => p[1]);
+  const pad = 0.45;
+  return { left: Math.min(...xs) - pad, right: Math.max(...xs) + pad, top: Math.min(...ys) - pad, bottom: Math.max(...ys) + pad };
+}
+
+/** Which way each side of the box faces (y grows downward in the picture). */
+const SIDE_DIRECTIONS = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] };
+
+/**
+ * The sides of the hand where tags may go: all of them except the forearm's side.
+ * @param {number[]} wrist - 2D wrist point.
+ * @param {number[]} forearmEnd - 2D end of the forearm.
+ * @param {boolean} showForearm - Whether the forearm is drawn.
+ * @returns {string[]} Side names, like ["top", "left", "right"].
+ */
+function allowedSides(wrist, forearmEnd, showForearm) {
+  const names = Object.keys(SIDE_DIRECTIONS);
+  if (!showForearm) {
+    return names;
+  }
+  const dx = forearmEnd[0] - wrist[0];
+  const dy = forearmEnd[1] - wrist[1];
+  let forearmSide = names[0];
+  for (const name of names) {
+    const [sx, sy] = SIDE_DIRECTIONS[name];
+    const [fx, fy] = SIDE_DIRECTIONS[forearmSide];
+    if (dx * sx + dy * sy > dx * fx + dy * fy) {
+      forearmSide = name;
+    }
+  }
+  return names.filter((name) => name !== forearmSide);
+}
+
+/**
+ * Picks the allowed side of the box that a point is closest to.
+ * @param {number[]} point - 2D point.
+ * @param {{left:number, right:number, top:number, bottom:number}} box - The hand's box.
+ * @param {string[]} sides - Allowed sides.
+ * @returns {string} The side's name.
+ */
+function nearestSide(point, box, sides) {
+  // Measure position from the box's center, as a fraction of its half-size,
+  // so tall and wide hands are treated fairly.
+  const u = (point[0] - (box.left + box.right) / 2) / ((box.right - box.left) / 2);
+  const v = (point[1] - (box.top + box.bottom) / 2) / ((box.bottom - box.top) / 2);
+  let best = sides[0];
+  let bestScore = -Infinity;
+  for (const side of sides) {
+    const [sx, sy] = SIDE_DIRECTIONS[side];
+    const score = u * sx + v * sy;
+    if (score > bestScore) {
+      best = side;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+/**
+ * Moves a tag so it sits just outside its side of the hand's box.
+ * @param {{at:number[], width:number, height:number, side:string}} label - The tag (changed in place).
+ * @param {{left:number, right:number, top:number, bottom:number}} box - The hand's box.
+ * @returns {void}
+ */
+function keepOutside(label, box) {
+  const gap = LABEL_GAP * 0.5;
+  if (label.side === 'top') {
+    label.at[1] = Math.min(label.at[1], box.top - gap - label.height / 2);
+  } else if (label.side === 'bottom') {
+    label.at[1] = Math.max(label.at[1], box.bottom + gap + label.height / 2);
+  } else if (label.side === 'left') {
+    label.at[0] = Math.min(label.at[0], box.left - gap - label.width / 2);
+  } else {
+    label.at[0] = Math.max(label.at[0], box.right + gap + label.width / 2);
+  }
+}
+
+/**
+ * Pushes overlapping tags apart (changes them in place). Each round, every
+ * pair that overlaps moves apart along whichever direction (left-right or
+ * up-down) needs the smaller move; then each tag is put back outside the hand.
+ * @param {Array<{at:number[], width:number, height:number, side:string}>} labels - The tags.
+ * @param {{left:number, right:number, top:number, bottom:number}} box - The hand's box.
+ * @returns {void}
+ */
+function separateLabels(labels, box) {
+  const space = 0.15;
+  for (let round = 0; round < 80; round++) {
+    let moved = false;
+    for (let i = 0; i < labels.length; i++) {
+      for (let j = i + 1; j < labels.length; j++) {
+        const a = labels[i];
+        const b = labels[j];
+        const overlapX = (a.width + b.width) / 2 + space - Math.abs(a.at[0] - b.at[0]);
+        const overlapY = (a.height + b.height) / 2 + space - Math.abs(a.at[1] - b.at[1]);
+        if (overlapX <= 0 || overlapY <= 0) {
+          continue;
+        }
+        moved = true;
+        // Move each tag half of the way (in opposite directions).
+        if (overlapX < overlapY) {
+          const push = (a.at[0] <= b.at[0] ? -1 : 1) * overlapX / 2;
+          a.at[0] += push;
+          b.at[0] -= push;
+        } else {
+          const push = (a.at[1] <= b.at[1] ? -1 : 1) * overlapY / 2;
+          a.at[1] += push;
+          b.at[1] -= push;
+        }
+        keepOutside(a, box);
+        keepOutside(b, box);
+      }
+    }
+    if (!moved) {
+      return;
+    }
+  }
 }
 
 /**
@@ -393,14 +589,42 @@ function drawMotion(svg, shape) {
 }
 
 /**
- * Draws a list of shapes (palm, bones, nails, motion arrow) into an <svg>.
+ * Draws one finger name tag: a thin line from the finger to a colored tag.
+ * @param {SVGElement} svg - Where to draw.
+ * @param {{finger:string, name:string, anchor:number[], at:number[], width:number, height:number, highlighted:boolean}} shape
+ * @returns {void}
+ */
+function drawLabel(svg, shape) {
+  const outline = shape.highlighted ? DIAGRAM_COLORS.highlightOutline : DIAGRAM_COLORS.outline;
+  svg.append(svgElement('line', {
+    x1: shape.anchor[0], y1: shape.anchor[1], x2: shape.at[0], y2: shape.at[1],
+    stroke: outline, 'stroke-width': 0.07, 'stroke-dasharray': '0.18 0.12',
+  }));
+  svg.append(svgElement('rect', {
+    x: shape.at[0] - shape.width / 2, y: shape.at[1] - shape.height / 2,
+    width: shape.width, height: shape.height, rx: shape.height / 2,
+    fill: shape.highlighted ? DIAGRAM_COLORS.highlightFill : DIAGRAM_COLORS[shape.finger],
+    stroke: outline, 'stroke-width': 0.07,
+  }));
+  const text = svgElement('text', {
+    x: shape.at[0], y: shape.at[1], 'text-anchor': 'middle', 'dominant-baseline': 'central',
+    'font-size': shape.fontSize, 'font-weight': 750, fill: DIAGRAM_COLORS.label,
+  });
+  text.textContent = shape.name;
+  svg.append(text);
+}
+
+/**
+ * Draws a list of shapes (palm, bones, nails, motion arrow, name tags) into an <svg>.
  * @param {SVGElement} svg - Where to draw.
  * @param {Array<Object>} shapes - From buildDiagramShapes().
  * @returns {void}
  */
 function drawShapes(svg, shapes) {
   for (const shape of shapes) {
-    if (shape.type === 'palm') {
+    if (shape.type === 'label') {
+      drawLabel(svg, shape);
+    } else if (shape.type === 'palm') {
       drawPalm(svg, shape);
     } else if (shape.type === 'nail') {
       drawNail(svg, shape);
@@ -425,9 +649,10 @@ function poseFor(letter) {
  * Draws (or redraws) the diagram for a letter into an existing <svg>.
  * @param {SVGElement} svg - The SVG element to fill.
  * @param {string} letter - The letter, e.g. "B".
- * @param {{flipX?:boolean, highlightFinger?:string|null, turn?:{yaw:number, pitch:number}}} options
+ * @param {{flipX?:boolean, highlightFinger?:string|null, labels?:boolean, turn?:{yaw:number, pitch:number}}} options
  *   flipX = mirror the picture (for left-handed signers),
  *   highlightFinger = finger to draw in red,
+ *   labels = write each finger's name next to it,
  *   turn = extra rotation in degrees when the user drags the picture to look around.
  * @returns {void}
  */

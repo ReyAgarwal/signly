@@ -12,12 +12,12 @@
  *      written instructions and you press Skip when you've practiced them.
  */
 
-import { LETTER_TIPS, LETTER_MIXUPS } from '../letters.js';
-import { parsePhrase, MOTION_LETTER_TIPS } from '../phrase.js';
+import { LETTER_MIXUPS } from '../letters.js';
+import { parsePhrase } from '../phrase.js';
 import { LetterSmoother, HintSmoother } from '../smoothing.js';
 import { findFingerToFix, hintMessage } from '../hints.js';
 import { renderHandDiagram, enableDragToTurn } from '../diagram.js';
-import { byId, makeElement, setMeter, showSuccessBurst, formatPercent, renderLetterPhotos } from '../ui.js';
+import { byId, makeElement, setMeter, showSuccessBurst, formatPercent, renderLetterPhotos, renderSteps } from '../ui.js';
 
 /** After moving to a new letter, give the user this long to change handshape. */
 const GET_READY_MS = 1000;
@@ -87,7 +87,7 @@ export function createSpellMode(app) {
     const key = [letter, highlightFinger, app.settings.flipDiagrams, turn.yaw, turn.pitch].join('|');
     if (key !== shownDiagramKey) {
       shownDiagramKey = key;
-      renderHandDiagram(diagram, letter, { flipX: app.settings.flipDiagrams, highlightFinger, turn });
+      renderHandDiagram(diagram, letter, { flipX: app.settings.flipDiagrams, highlightFinger, turn, labels: true });
     }
   }
 
@@ -131,15 +131,16 @@ export function createSpellMode(app) {
     shownDiagramKey = '';
     showDiagram(null);
     renderLetterPhotos(byId('spell-photos'), step.letter, app.settings.flipDiagrams);
-    diagram.nextElementSibling.textContent = step.kind === 'motion' ? 'Start shape + movement' : 'Drag to turn the hand';
+    diagram.nextElementSibling.textContent = step.kind === 'motion'
+      ? 'Start shape + movement (dot = start)'
+      : 'Diagram · drag to turn it';
+    renderSteps(byId('spell-steps'), step.letter);
 
     if (step.kind === 'motion') {
-      byId('spell-tip').textContent = MOTION_LETTER_TIPS[step.letter];
       byId('spell-mixup').textContent = '';
       setHint(step.letter + ' is signed with a movement, so the coach can\'t check it yet. Practice it, then press Skip (→).', true);
       return;
     }
-    byId('spell-tip').textContent = LETTER_TIPS[step.letter];
     byId('spell-mixup').textContent = LETTER_MIXUPS[step.letter];
     setHint('Make the letter ' + step.letter + ' and hold it steady.', true);
   }
